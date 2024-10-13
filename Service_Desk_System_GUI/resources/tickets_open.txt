@@ -1,0 +1,37 @@
+TicketID: 1
+CustomerEmail: test@gmail.com
+AgentUsername: admin
+Topic: test
+Issue: hellooooo
+CreatedAt: 2024-09-01T22:19:31.610764
+Priority: 1
+Status: OPEN
+EndTicket
+TicketID: 1
+CustomerEmail: test@gmail.com
+AgentUsername: admin
+Topic: test
+Issue: hellooooo
+CreatedAt: 2024-09-01T22:19:31.610764
+Priority: 1
+Status: OPEN
+Message:
+SenderType: Customer
+SenderName: test
+Content: i need help
+Timestamp: 2024-09-01T22:19:48.276485
+EndTicket
+TicketID: 1
+CustomerEmail: test@gmail.com
+AgentUsername: admin
+Topic: test
+Issue: hellooooo
+CreatedAt: 2024-09-01T22:19:31.610764
+Priority: 3
+Status: OPEN
+Message:
+SenderType: Customer
+SenderName: test
+Content: i need help
+Timestamp: 2024-09-01T22:19:48.276485
+EndTicket

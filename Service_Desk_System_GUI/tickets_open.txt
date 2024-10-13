@@ -1,0 +1,9 @@
+TicketID: 1
+CustomerEmail: testing@gmail.com
+AgentUsername: admin
+Topic: test
+Issue: test
+CreatedAt: 2024-09-01T17:40:52
+Priority: 1
+Status: OPEN
+EndTicket
