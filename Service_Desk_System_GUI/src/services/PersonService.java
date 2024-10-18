@@ -6,7 +6,9 @@ package services;
 
 import service.desk.system.SupportStaffMember;
 import service.desk.system.Customer;
+import util.DatabaseUtil;
 
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,103 +22,181 @@ import java.util.List;
  * Handles adding persons, retrieving all persons, and finding a person by ID or email.
  */
 public class PersonService<T> {
-    private final List<T> persons = new ArrayList<>();
     private final Class<T> type;
+    private Connection connection;
 
-    /*
-     * Constructor for PersonService.
-     * Initializes with the class type of T (e.g., Customer or SupportStaffMember).
-     */
     public PersonService(Class<T> type) {
         this.type = type;
+        try {
+            this.connection = DatabaseUtil.getConnection(); // Initialize database connection
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to establish database connection", e);
+        }
     }
 
-    /**
-     * Adds a person to the list of managed persons.
-     */
     public void addPerson(T person) {
-        persons.add(person);
+        String insertSQL = getInsertSQL();
+        if (insertSQL == null) {
+            return; // Invalid type, nothing to insert
+        }
+
+        try (PreparedStatement stmt = connection.prepareStatement(insertSQL)) {
+            setPersonParameters(stmt, person);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    /*
-     * Retrieves all persons from the list.
-     * A copy is returned to maintain encapsulation.
-     */
     public List<T> getAllPersons() {
-        return new ArrayList<>(persons); // Return a copy to ensure encapsulation
+        List<T> persons = new ArrayList<>();
+        String querySQL = getSelectSQL();
+        if (querySQL == null) {
+            return persons; // Invalid type, no data to retrieve
+        }
+
+        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(querySQL)) {
+            while (rs.next()) {
+                persons.add(createPersonFromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return persons;
     }
 
-    /*
-     * Finds a person by their ID.
-     * Checks whether the person is a Customer or SupportStaffMember to determine the correct ID.
-     */
     public T getPersonById(int id) {
-        return persons.stream()
-            .filter(person -> {
-                if (type.equals(Customer.class)) {
-                    return ((Customer) person).getId() == id;
-                } else if (type.equals(SupportStaffMember.class)) {
-                    return ((SupportStaffMember) person).getId() == id;
+        String querySQL = getSelectSQL() + " WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return createPersonFromResultSet(rs);
                 }
-                return false;
-            })
-            .findFirst()
-            .orElse(null);
-    }
-
-    /*
-     * Finds a person by their email address.
-     * Checks whether the person is a Customer or SupportStaffMember to determine the correct email.
-     */
-    public T findPersonByEmail(String email) {
-        return persons.stream()
-            .filter(person -> {
-                if (type.equals(Customer.class)) {
-                    return ((Customer) person).getEmail().equals(email);
-                } else if (type.equals(SupportStaffMember.class)) {
-                    return ((SupportStaffMember) person).getEmail().equals(email);
-                }
-                return false;
-            })
-            .findFirst()
-            .orElse(null);
-    }
-
-    /*
-     * Finds a person by their username.
-     * This method is only applicable for SupportStaffMember.
-     */
-    public T findPersonByUsername(String username) {
-        if (type.equals(SupportStaffMember.class)) {
-            return persons.stream()
-                .filter(person -> ((SupportStaffMember) person).getUsername().equals(username))
-                .findFirst()
-                .orElse(null);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return null;
     }
 
-    /*
-     * Checks if an email address already exists in the list of persons.
-     */
-    public boolean emailExists(String email) {
-        return persons.stream()
-            .anyMatch(person -> {
-                if (type.equals(Customer.class)) {
-                    return ((Customer) person).getEmail().equals(email);
-                } else if (type.equals(SupportStaffMember.class)) {
-                    return ((SupportStaffMember) person).getEmail().equals(email);
+    public T findPersonByEmail(String email) {
+        String querySQL = getSelectSQL() + " WHERE email = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
+            stmt.setString(1, email);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return createPersonFromResultSet(rs);
                 }
-                return false;
-            });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
-    /*
-     * Checks if a username already exists in the list of persons.
-     * This check is only relevant for SupportStaffMember.
-     */
+    public T findPersonByUsername(String username) {
+        if (!type.equals(SupportStaffMember.class)) {
+            return null; // Only valid for SupportStaffMember
+        }
+
+        String querySQL = "SELECT id, username, email, password FROM support_staff WHERE username = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return createPersonFromResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public boolean emailExists(String email) {
+        return exists("email", email);
+    }
+
     public boolean usernameExists(String username) {
-        return type.equals(SupportStaffMember.class) && persons.stream()
-            .anyMatch(person -> ((SupportStaffMember) person).getUsername().equals(username));
+        return exists("username", username);
+    }
+
+    private boolean exists(String columnName, String value) {
+        String querySQL = String.format("SELECT 1 FROM %s WHERE %s = ?", getTableName(), columnName);
+        try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
+            stmt.setString(1, value);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next(); // If there's a result, the value exists
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private String getInsertSQL() {
+        if (type.equals(Customer.class)) {
+            // Remove ID from the insert statement
+            return "INSERT INTO customers (name, email, password) VALUES (?, ?, ?)";
+        } else if (type.equals(SupportStaffMember.class)) {
+            // Remove ID from the insert statement
+            return "INSERT INTO support_staff (username, email, password) VALUES (?, ?, ?)";
+        }
+        return null; // Invalid type
+    }
+
+    private String getSelectSQL() {
+        if (type.equals(Customer.class)) {
+            return "SELECT id, name, email, password FROM customers";
+        } else if (type.equals(SupportStaffMember.class)) {
+            return "SELECT id, username, email, password FROM support_staff";
+        }
+        return null; // Invalid type
+    }
+
+    private void setPersonParameters(PreparedStatement stmt, T person) throws SQLException {
+        if (person instanceof Customer) {
+            Customer customer = (Customer) person;
+            // No need to set the ID here as it is auto-generated
+            stmt.setString(1, customer.getName()); // Set name
+            stmt.setString(2, customer.getEmail());
+            stmt.setString(3, customer.getPassword());
+        } else if (person instanceof SupportStaffMember) {
+            SupportStaffMember staff = (SupportStaffMember) person;
+            // No need to set the ID here as it is auto-generated
+            stmt.setString(1, staff.getUsername());
+            stmt.setString(2, staff.getEmail());
+            stmt.setString(3, staff.getPassword());
+        }
+    }
+
+    private T createPersonFromResultSet(ResultSet rs) throws SQLException {
+        if (type.equals(Customer.class)) {
+            return type.cast(new Customer(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("email"),
+                    rs.getString("password")
+            ));
+        } else if (type.equals(SupportStaffMember.class)) {
+            return type.cast(new SupportStaffMember(
+                    rs.getInt("id"),
+                    rs.getString("username"),
+                    rs.getString("email"),
+                    rs.getString("password")
+            ));
+        }
+        return null; // Invalid type
+    }
+
+    private String getTableName() {
+        if (type.equals(Customer.class)) {
+            return "customers";
+        } else if (type.equals(SupportStaffMember.class)) {
+            return "support_staff";
+        }
+        return null; // Invalid type
     }
 }

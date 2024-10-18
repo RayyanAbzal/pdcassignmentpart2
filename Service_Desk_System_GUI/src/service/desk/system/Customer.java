@@ -15,6 +15,7 @@ package service.desk.system;
 public class Customer extends Person implements Authenticated {
     private String password; // Holds the hashed password for the customer
 
+    // Updated constructor to include name
     public Customer(int id, String name, String email, String password) {
         super(id, name, email);
         this.password = password; // Set the hashed password
@@ -32,13 +33,14 @@ public class Customer extends Person implements Authenticated {
 
     @Override
     public String getUsername() {
-        // Customers don't use username, so we can return null or throw an UnsupportedOperationException
-        return null; // Or throw new UnsupportedOperationException("Customer does not have a username.");
+        // Customers don't have a username, but we return the email instead for authentication purposes
+        return getEmail();
     }
 
     @Override
     public void setUsername(String username) {
-        // Customers don't use username, so this method can be empty
+        // Customers don't have a username, so this method can be left empty or log a warning
+        throw new UnsupportedOperationException("Customer does not use a username. Email is used for login.");
     }
 
     @Override

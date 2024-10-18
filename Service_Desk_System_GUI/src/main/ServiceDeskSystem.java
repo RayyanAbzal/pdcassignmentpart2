@@ -4,16 +4,16 @@
  */
 package main;
 
+
 import service.desk.system.Customer;
 import service.desk.system.SupportStaffMember;
 import service.desk.system.Ticket;
 import services.PersonService;
-import services.TicketService;
-import util.FileUtil;
+import util.DatabaseUtil;
+import java.sql.SQLException;
 import java.util.List;
-import java.util.Random;
 import java.util.Scanner;
-
+import services.TicketService;
 /**
  *
  * @author rayyanabzal
@@ -26,180 +26,147 @@ import java.util.Scanner;
  * and user input handling.
  */
 public class ServiceDeskSystem {
-    public static final String CUSTOMERS_FILE = "./resources/customers.txt";
-    public static final String AGENTS_FILE = "./resources/agents.txt";
-    private static final String TICKETS_OPEN_FILE = "./resources/tickets_open.txt";
-    private static final String TICKETS_CLOSED_FILE = "./resources/tickets_closed.txt";
-
-    private PersonService<Customer> customerService = new PersonService<>(Customer.class);
-    private PersonService<SupportStaffMember> agentService = new PersonService<>(SupportStaffMember.class);
-    private TicketService ticketService = new TicketService();
-
-    private int nextCustomerId = 1;
-    private int nextAgentId = 1;
-    private Random random = new Random();
-    private String lastMessage = "";
-
+    private Scanner scanner;
+    private PersonService<Customer> customerService;
+    private PersonService<SupportStaffMember> supportStaffService;
+    private int nextCustomerId;
     private CustomerRegistrationHandler customerRegistrationHandler;
-    private AgentRegistrationHandler agentRegistrationHandler;
-    private CustomerLoginHandler customerLoginHandler;
-    private AgentLoginHandler agentLoginHandler;
     private TicketManagementHandler ticketManagementHandler;
-    /**
-     * Initializes the system by setting up handlers and loading initial data.
-     * Creates instances of registration and login handlers, ticket management, 
-     * and communication handlers, and loads data from files.
-     */
+
     public ServiceDeskSystem() {
-        this.customerRegistrationHandler = new CustomerRegistrationHandler(
-            customerService, 
-            nextCustomerId, 
-            this::updateNextCustomerId, 
-            this::setLastMessage
-        );
-        
-        this.agentRegistrationHandler = new AgentRegistrationHandler(
-            agentService, 
-            nextAgentId, 
-            this::updateNextAgentId, 
-            this::setLastMessage
-        );
-
-        this.customerLoginHandler = new CustomerLoginHandler(
-            customerService, 
-            this::setLastMessage
-        );
-
-        this.agentLoginHandler = new AgentLoginHandler(
-            agentService, 
-            this::setLastMessage
-        );
-
+        this.scanner = new Scanner(System.in);
+        this.customerService = new PersonService<>(Customer.class);
+        this.supportStaffService = new PersonService<>(SupportStaffMember.class);
+        this.customerRegistrationHandler = new CustomerRegistrationHandler(customerService, this::setLastMessage);
         this.ticketManagementHandler = new TicketManagementHandler(
-            ticketService, 
-            agentService, 
-            customerService, 
-            this::generateTicketId, 
-            this::getRandomAgent
-        );
+                new TicketService(), supportStaffService, customerService, this::generateId, this::getRandomAgent);
     }
 
     public static void main(String[] args) {
         ServiceDeskSystem system = new ServiceDeskSystem();
-        system.loadInitialData();
+        try {
+            DatabaseUtil.initializeDatabase();
+        } catch (SQLException e) {
+            System.err.println("Error initializing database: " + e.getMessage());
+            return;
+        }
         system.run();
     }
 
-    /**
-     * Loads initial data for customers, agents, and tickets from respective files.
-     * Updates internal ID counters based on the data read from files.
-     */
-    private void loadInitialData() {
-        List<Customer> customers = FileUtil.readCustomersFromFile(CUSTOMERS_FILE);
-        for (Customer customer : customers) {
-            customerService.addPerson(customer);
-            updateNextCustomerId(customer.getId());
-        }
-
-        List<SupportStaffMember> agents = FileUtil.readSupportAgentsFromFile(AGENTS_FILE);
-        for (SupportStaffMember agent : agents) {
-            agentService.addPerson(agent);
-            updateNextAgentId(agent.getId());
-        }
-
-        List<Ticket> tickets = FileUtil.readTicketsFromFile(TICKETS_OPEN_FILE, customers, agents);
-        for (Ticket ticket : tickets) {
-            ticketService.addTicket(ticket);
-        }
-    }
-
-    /**
-     * Runs the main loop of the service desk system, displaying the main menu 
-     * and handling user input to perform various operations.
-     */
-    private void run() {
-        Scanner scanner = new Scanner(System.in);
+    public void run() {
         boolean running = true;
 
         while (running) {
-            System.out.println("Service Desk System");
-            if (lastMessage != null) {
-                System.out.println(lastMessage);
-                lastMessage = null;
-            }
-            System.out.println("1. Register as Customer");
-            System.out.println("2. Login as Customer");
-            System.out.println("3. Register as Support Staff Member");
-            System.out.println("4. Login as Support Staff Member");
+            System.out.println("\nWelcome to the Service Desk System!");
+            System.out.println("1. Customer Login");
+            System.out.println("2. Agent Login");
+            System.out.println("3. Register as Customer");
+            System.out.println("4. Register as Agent");
             System.out.println("5. Exit");
-            System.out.print("Select an option: ");
-            int option = scanner.nextInt();
+
+            int choice = scanner.nextInt();
             scanner.nextLine(); // consume newline
 
-            switch (option) {
+            switch (choice) {
                 case 1:
-                    customerRegistrationHandler.handleRegistration(scanner);
+                    customerLogin();
                     break;
                 case 2:
-                    handleCustomerLogin(scanner);
+                    agentLogin();
                     break;
                 case 3:
-                    agentRegistrationHandler.handleRegistration(scanner);
+                    registerCustomer();
                     break;
                 case 4:
-                    handleAgentLogin(scanner);
+                    registerAgent();
                     break;
                 case 5:
-                    saveData();
                     running = false;
                     break;
                 default:
-                    System.out.println("Invalid option. Try again.");
+                    System.out.println("Invalid choice, please try again.");
             }
         }
+
+        DatabaseUtil.closeConnection();
     }
 
-    /*
-     * Handles customer login, allowing the user to log in and access the customer menu if successful.
-     */
-    private void handleCustomerLogin(Scanner scanner) {
-        Customer customer = customerLoginHandler.handleLogin(scanner);
-        if (customer != null) {
-            customerMenu(scanner, customer);
-        } else {
-            System.out.println("Login failed. Try again.");
+    private void customerLogin() {
+        System.out.println("\nEnter your email:");
+        String email = scanner.nextLine();
+        System.out.println("Enter your password:");
+        String password = scanner.nextLine();
+
+        try {
+            List<Customer> customers = DatabaseUtil.getAllCustomers();
+            for (Customer customer : customers) {
+                if (customer.getEmail().equals(email) && customer.getPassword().equals(password)) {
+                    System.out.println("Login successful! Welcome, " + customer.getName());
+                    customerMenu(customer);
+                    return;
+                }
+            }
+            System.out.println("Invalid email or password. Please try again.");
+        } catch (SQLException e) {
+            System.err.println("Error logging in: " + e.getMessage());
         }
     }
 
-    /*
-     * Handles agent login, allowing the user to log in and access the agent menu if successful.
-     */
-    private void handleAgentLogin(Scanner scanner) {
-        SupportStaffMember agent = agentLoginHandler.handleLogin(scanner);
-        if (agent != null) {
-            agentMenu(scanner, agent);
-        } else {
-            System.out.println("Login failed. Try again.");
+    private void agentLogin() {
+        System.out.println("\nEnter your username:");
+        String username = scanner.nextLine();
+        System.out.println("Enter your password:");
+        String password = scanner.nextLine();
+
+        try {
+            List<SupportStaffMember> staffList = DatabaseUtil.getAllSupportStaff();
+            for (SupportStaffMember staff : staffList) {
+                if (staff.getUsername().equals(username) && staff.getPassword().equals(password)) {
+                    System.out.println("Login successful! Welcome, " + staff.getUsername());
+                    agentMenu(staff);
+                    return;
+                }
+            }
+            System.out.println("Invalid username or password. Please try again.");
+        } catch (SQLException e) {
+            System.err.println("Error logging in: " + e.getMessage());
         }
     }
 
-    /*
-     * Displays the customer menu and handles customer-specific operations such as 
-     * creating tickets, viewing tickets, and adding comments.
-     */
-    private void customerMenu(Scanner scanner, Customer customer) {
-        boolean running = true;
-        while (running) {
-            System.out.println("Customer Menu");
-            System.out.println("1. Create Ticket");
-            System.out.println("2. View My Tickets");
-            System.out.println("3. Add Comment to Ticket");
-            System.out.println("4. Logout");
-            System.out.print("Select an option: ");
-            int option = scanner.nextInt();
+    private void registerCustomer() {
+        customerRegistrationHandler.handleRegistration(scanner);
+    }
+
+    private void registerAgent() {
+        System.out.println("\nEnter your username:");
+        String username = scanner.nextLine();
+        System.out.println("Enter your email:");
+        String email = scanner.nextLine();
+        System.out.println("Enter your password:");
+        String password = scanner.nextLine();
+
+        SupportStaffMember staff = new SupportStaffMember(generateId(), username, email, password);
+
+        try {
+            DatabaseUtil.insertSupportStaff(staff);
+            System.out.println("Agent registered successfully!");
+        } catch (SQLException e) {
+            System.err.println("Error registering agent: " + e.getMessage());
+        }
+    }
+
+    private void customerMenu(Customer customer) {
+        boolean loggedIn = true;
+
+        while (loggedIn) {
+            System.out.println("\n1. Create Ticket");
+            System.out.println("2. View Tickets");
+            System.out.println("3. Logout");
+
+            int choice = scanner.nextInt();
             scanner.nextLine(); // consume newline
 
-            switch (option) {
+            switch (choice) {
                 case 1:
                     ticketManagementHandler.createTicket(scanner, customer);
                     break;
@@ -207,115 +174,48 @@ public class ServiceDeskSystem {
                     ticketManagementHandler.viewCustomerTickets(customer);
                     break;
                 case 3:
-                    ticketManagementHandler.addCommentToTicket(scanner, customer, null);
-                    break;
-                case 4:
-                    running = false;
+                    loggedIn = false;
                     break;
                 default:
-                    System.out.println("Invalid option. Try again.");
+                    System.out.println("Invalid choice, please try again.");
             }
         }
     }
 
-    /*
-     * Displays the agent menu and handles agent-specific operations such as 
-     * viewing tickets, resolving tickets, and setting ticket priority.
-     */
-    private void agentMenu(Scanner scanner, SupportStaffMember agent) {
-        boolean running = true;
-        while (running) {
-            System.out.println("Agent Menu");
-            System.out.println("1. View All Tickets");
-            System.out.println("2. Resolve Ticket");
-            System.out.println("3. View Ticket Comments");
-            System.out.println("4. Add Comment to Ticket");
-            System.out.println("5. Set Ticket Priority"); // Add this line
-            System.out.println("6. Logout");
-            System.out.print("Select an option: ");
-            int option = scanner.nextInt();
+    private void agentMenu(SupportStaffMember staff) {
+        boolean loggedIn = true;
+
+        while (loggedIn) {
+            System.out.println("\n1. View Open Tickets");
+            System.out.println("2. Logout");
+
+            int choice = scanner.nextInt();
             scanner.nextLine(); // consume newline
 
-            switch (option) {
+            switch (choice) {
                 case 1:
-                    ticketManagementHandler.viewAllTickets();
+                    //ticketManagementHandler.viewAgentTickets(staff);
                     break;
                 case 2:
-                    ticketManagementHandler.resolveTicket(scanner);
-                    break;
-                case 3:
-                    ticketManagementHandler.viewCommentsForTicket(scanner);
-                    break;
-                case 4:
-                    ticketManagementHandler.addCommentToTicket(scanner, null, agent);
-                    break;
-                case 5:
-                    ticketManagementHandler.setTicketPriority(scanner, agent); // Add this line
-                    break;
-                case 6:
-                    running = false;
+                    loggedIn = false;
                     break;
                 default:
-                    System.out.println("Invalid option. Try again.");
+                    System.out.println("Invalid choice, please try again.");
             }
         }
     }
 
-    /**
-     * Saves current data for customers, agents, and tickets to their respective files.
-     * Updates open and closed ticket files as needed.
-     */
-    private void saveData() {
-        FileUtil.writeCustomersToFile(CUSTOMERS_FILE, customerService.getAllPersons());
-        FileUtil.writeSupportAgentsToFile(AGENTS_FILE, agentService.getAllPersons());
-        FileUtil.appendTicketsToClosedFile(TICKETS_CLOSED_FILE, ticketService.getAllTickets());
-        FileUtil.appendTicketsToOpenFile(TICKETS_OPEN_FILE, ticketService.getOpenTickets());
-    }
-
-    /*
-     * Updates the next customer ID to be used. Ensures the ID sequence continues correctly 
-     * based on the highest ID currently in use.
-     */
-    private void updateNextCustomerId(int id) {
-        if (id >= nextCustomerId) {
-            nextCustomerId = id + 1;
-        }
-    }
-
-    /*
-     * Updates the next agent ID to be used. Ensures the ID sequence continues correctly 
-     * based on the highest ID currently in use.
-     */
-    private void updateNextAgentId(int id) {
-        if (id >= nextAgentId) {
-            nextAgentId = id + 1;
-        }
-    }
-
-    /*
-     * Sets the last message to be displayed to the user.
-     */
     private void setLastMessage(String message) {
-        this.lastMessage = message;
+        System.out.println(message);
     }
 
-    /*
-     * Generates a new ticket ID. This example simply uses the size of open tickets list 
-     * plus one as a new ID.
-     */
-    private int generateTicketId() {
-        return ticketService.getOpenTickets().size() + 1; // Simple example; adjust as needed
+    private int generateId() {
+        return nextCustomerId++;
     }
 
-    /*
-     * Selects a random agent from the list of available agents.
-     */
     private SupportStaffMember getRandomAgent() {
-        List<SupportStaffMember> agents = agentService.getAllPersons();
-        if (agents.isEmpty()) {
-            return null;
-        }
-        int index = random.nextInt(agents.size());
-        return agents.get(index);
+        // Implement logic to get a random available agent
+        // For simplicity, returning null here
+        return null;
     }
 }
