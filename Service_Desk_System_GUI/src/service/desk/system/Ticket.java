@@ -30,6 +30,7 @@ public class Ticket {
     private List<Message> messages = new ArrayList<>(); // List of messages associated with the ticket
     private Status status; // Status of the ticket (OPEN or CLOSED)
 
+    // Constructor with all fields
     public Ticket(int id, Customer customer, SupportStaffMember assignedAgent, String topic, String content, LocalDateTime createdAt, int priority) {
         this.id = id;
         this.customer = customer;
@@ -148,7 +149,7 @@ public class Ticket {
                "Content: " + content + "\n" +
                "Priority: " + (priority == 1 ? "Low" : priority == 2 ? "Medium" : "High") + "\n" +
                "Status: " + status + "\n" +
-               "Created At: " + createdAt + "\n" +
+               "Created At: " + getCreatedAt() + "\n" +
                "Assigned Agent: " + (assignedAgent != null ? assignedAgent.getName() : "None") + "\n" +
                "Customer: " + customer.getName() + "\n" +
                "Messages: \n" + getMessagesString();
@@ -163,5 +164,12 @@ public class Ticket {
             sb.append(message.toString()).append("\n");
         }
         return sb.toString();
+    }
+
+    /**
+     * @param createdAt the createdAt to set
+     */
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
