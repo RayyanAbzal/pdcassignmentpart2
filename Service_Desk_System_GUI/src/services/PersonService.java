@@ -41,9 +41,14 @@ public class PersonService<T> {
             return; // Invalid type, nothing to insert
         }
 
-        try (PreparedStatement stmt = connection.prepareStatement(insertSQL)) {
-            setPersonParameters(stmt, person);
-            stmt.executeUpdate();
+        try {
+            if (person instanceof Customer) {
+                // Insert the customer into the database
+                DatabaseUtil.insertCustomer((Customer) person);
+            } else if (person instanceof SupportStaffMember) {
+                // Insert the support staff into the database
+                DatabaseUtil.insertSupportStaff((SupportStaffMember) person);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -64,6 +69,21 @@ public class PersonService<T> {
             e.printStackTrace();
         }
         return persons;
+    }
+
+    public List<SupportStaffMember> getAllSupportStaff() {
+        List<SupportStaffMember> supportStaff = new ArrayList<>();
+        String querySQL = "SELECT id, username, email, password FROM supportstaff"; // Modify based on your table structure
+        
+        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(querySQL)) {
+            while (rs.next()) {
+                // Assuming createPersonFromResultSet can handle this type
+                supportStaff.add((SupportStaffMember) createPersonFromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return supportStaff;
     }
 
     public T getPersonById(int id) {
@@ -101,7 +121,7 @@ public class PersonService<T> {
             return null; // Only valid for SupportStaffMember
         }
 
-        String querySQL = "SELECT id, username, email, password FROM support_staff WHERE username = ?";
+        String querySQL = "SELECT id, username, email, password FROM supportstaff WHERE username = ?";
         try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
             stmt.setString(1, username);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -142,7 +162,7 @@ public class PersonService<T> {
             return "INSERT INTO customers (name, email, password) VALUES (?, ?, ?)";
         } else if (type.equals(SupportStaffMember.class)) {
             // Remove ID from the insert statement
-            return "INSERT INTO support_staff (username, email, password) VALUES (?, ?, ?)";
+            return "INSERT INTO supportstaff (username, email, password) VALUES (?, ?, ?)";
         }
         return null; // Invalid type
     }
@@ -151,7 +171,7 @@ public class PersonService<T> {
         if (type.equals(Customer.class)) {
             return "SELECT id, name, email, password FROM customers";
         } else if (type.equals(SupportStaffMember.class)) {
-            return "SELECT id, username, email, password FROM support_staff";
+            return "SELECT id, username, email, password FROM supportstaff";
         }
         return null; // Invalid type
     }
@@ -195,8 +215,16 @@ public class PersonService<T> {
         if (type.equals(Customer.class)) {
             return "customers";
         } else if (type.equals(SupportStaffMember.class)) {
-            return "support_staff";
+            return "supportstaff";
         }
         return null; // Invalid type
+    }
+    
+    public Customer findCustomerById(int id) {
+        return (Customer) getPersonById(id);
+    }
+
+    public SupportStaffMember findAgentById(int id) {
+        return (SupportStaffMember) getPersonById(id);
     }
 }
