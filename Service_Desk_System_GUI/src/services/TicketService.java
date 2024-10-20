@@ -9,8 +9,10 @@ import util.DatabaseUtil;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 import service.desk.system.Customer;
 import service.desk.system.Message;
+import service.desk.system.SupportStaffMember;
 /**
  *
  * @author rayyanabzal
@@ -138,17 +140,56 @@ public class TicketService {
      * Finds all tickets associated with a specific customer.
      */
     public List<Ticket> findTicketsByCustomer(Customer customer) {
+    try {
+        List<Ticket> allTickets = DatabaseUtil.getAllTickets();
+        // Use the customer's ID for comparison
+        List<Ticket> customerTickets = allTickets.stream()
+        .filter(ticket -> ticket.getCustomer() != null && ticket.getCustomer().getId() == customer.getId())
+        .collect(Collectors.toList());
+
+        System.out.println("Searching for tickets for customer ID: " + customer.getId());
+        if (customerTickets.isEmpty()) {
+        System.out.println("No tickets found for customer ID " + customer.getId());
+        } else {
+        System.out.println("Tickets found: " + customerTickets.size());
+    }
+
+        return customerTickets;
+    } catch (SQLException e) {
+        System.out.println("Error finding tickets by customer: " + e.getMessage());
+    }
+    return null;
+    }
+    
+    public List<Ticket> getTicketsAssignedToAgent(SupportStaffMember agent) {
         try {
             List<Ticket> allTickets = DatabaseUtil.getAllTickets();
-            // Use the customer's ID for comparison to ensure unique match
-            allTickets.removeIf(ticket -> ticket.getCustomer() == null || ticket.getCustomer().getId() != customer.getId());
-            if (allTickets.isEmpty()) {
-                System.out.println("No tickets found for customer ID " + customer.getId());
+            // Filter tickets that are assigned to the provided agent
+            List<Ticket> assignedTickets = allTickets.stream()
+                    .filter(ticket -> ticket.getAssignedAgent() != null && ticket.getAssignedAgent().equals(agent))
+                    .collect(Collectors.toList());
+
+            if (assignedTickets.isEmpty()) {
+                System.out.println("No tickets found for agent: " + agent.getUsername());
             }
-            return allTickets;
+            return assignedTickets;
         } catch (SQLException e) {
-            System.out.println("Error finding tickets by customer: " + e.getMessage());
+            System.out.println("Error retrieving tickets for agent: " + e.getMessage());
         }
         return null;
+    }
+    
+    public int getAssignedTicketCount(SupportStaffMember agent) {
+        try {
+            // Retrieve all tickets from the database
+            List<Ticket> tickets = DatabaseUtil.getAllTickets();
+            // Count the number of tickets assigned to the specified agent
+            return (int) tickets.stream()
+                    .filter(ticket -> ticket.getAssignedAgent() != null && ticket.getAssignedAgent().equals(agent))
+                    .count();
+        } catch (SQLException e) {
+            System.out.println("Error retrieving assigned ticket count: " + e.getMessage());
+            return 0; // Return 0 if an error occurs
+        }
     }
 }
