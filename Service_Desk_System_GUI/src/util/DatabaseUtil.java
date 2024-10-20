@@ -11,6 +11,7 @@ import java.util.List;
 import service.desk.system.Customer;
 import service.desk.system.SupportStaffMember;
 import service.desk.system.Ticket;
+import services.PersonService;
 
 /**
  *
@@ -170,13 +171,22 @@ public class DatabaseUtil {
     }
 
     // Insert a new support staff member into the database
-    public static void insertSupportStaff(SupportStaffMember staff) throws SQLException {
-        String query = "INSERT INTO SupportStaff (username, email, password) VALUES (?, ?, ?)";
-        try (PreparedStatement pstmt = getConnection().prepareStatement(query)) {
+   public static void insertSupportStaff(SupportStaffMember staff) throws SQLException {
+        String insertSupportStaffSQL = "INSERT INTO SupportStaff (username, email, password) VALUES (?, ?, ?)";
+        try (PreparedStatement pstmt = getConnection().prepareStatement(insertSupportStaffSQL, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, staff.getUsername());
             pstmt.setString(2, staff.getEmail());
-            pstmt.setString(3, staff.getPassword());  // No hashing, plain password saved
+            pstmt.setString(3, staff.getPassword());  // Save plain password directly
             pstmt.executeUpdate();
+
+            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    int newId = generatedKeys.getInt(1);  // Get the generated ID if needed
+                    System.out.println("New Support Staff Member ID: " + newId);
+                } else {
+                    throw new SQLException("Creating support staff member failed, no ID obtained.");
+                }
+            }
         }
     }
 
@@ -253,7 +263,8 @@ public class DatabaseUtil {
     public static List<Ticket> getAllTickets() throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
         String query = "SELECT * FROM Tickets";
-        try (Statement stmt = getConnection().createStatement();
+
+        try (Statement stmt = DatabaseUtil.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 int id = rs.getInt("id");
@@ -264,9 +275,30 @@ public class DatabaseUtil {
                 LocalDateTime createdAt = rs.getTimestamp("createdAt").toLocalDateTime();
                 int priority = rs.getInt("priority");
                 String status = rs.getString("status");
-               // tickets.add(new Ticket(id, customerId, agentId, topic, content, createdAt, priority, Ticket.Status.valueOf(status)));
+
+                // Use PersonService to find Customer and SupportStaffMember
+                PersonService<Customer> customerService = new PersonService<>(Customer.class);
+                PersonService<SupportStaffMember> agentService = new PersonService<>(SupportStaffMember.class);
+
+                Customer customer = customerService.getPersonById(customerId); // Get Customer by ID
+                SupportStaffMember assignedAgent = agentService.getPersonById(agentId); // Get Agent by ID
+
+                // Create and add the Ticket object to the list
+                Ticket ticket = new Ticket(id, customer, assignedAgent, topic, content, createdAt, priority);
+                tickets.add(ticket);
             }
         }
         return tickets;
+    }
+    
+    public static int getMaxTicketId() throws SQLException {
+        String query = "SELECT MAX(id) FROM Tickets";
+        try (PreparedStatement pstmt = getConnection().prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1); // Returns the maximum ID, or null if no tickets exist
+            }
+        }
+        return 0; // Return 0 if no tickets exist
     }
 }
