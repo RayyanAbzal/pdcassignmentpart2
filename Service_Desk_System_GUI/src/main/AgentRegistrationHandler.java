@@ -8,10 +8,12 @@ import service.desk.system.SupportStaffMember;
 import services.PersonService;
 import util.EmailUtil;
 import util.PasswordUtil;
-import java.util.Scanner;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import util.FileUtil;
 
 /**
  *
@@ -26,138 +28,79 @@ import util.FileUtil;
  * Once all the details are verified, the agent is registered, and the information is saved.
  */
 public class AgentRegistrationHandler {
-    // Pattern for validating the agent's name (at least 3 letters long)
-    private static final Pattern NAME_PATTERN = Pattern.compile("^[a-zA-Z]{3,}$");
+    private final PersonService<SupportStaffMember> personService;
+    private final SetLastMessageCallback setLastMessageCallback;
 
-    private PersonService<SupportStaffMember> agentService;
-    private int nextAgentId;
-    private UpdateNextAgentIdCallback updateNextAgentIdCallback;
-    private SetLastMessageCallback setLastMessageCallback;
-
-    /**
-     * Sets up the registration handler with necessary services and callbacks.
-     * 
-     * Initializes the handler with the agent service, the next agent ID to use, and callbacks 
-     * for updating the agent ID and setting messages.
-     */
-    // got assistance from chatgpt for this:
-    public AgentRegistrationHandler(PersonService<SupportStaffMember> agentService, int nextAgentId, 
-                                    UpdateNextAgentIdCallback updateNextAgentIdCallback, 
-                                    SetLastMessageCallback setLastMessageCallback) {
-        this.agentService = agentService;
-        this.nextAgentId = nextAgentId;
-        this.updateNextAgentIdCallback = updateNextAgentIdCallback;
+    public AgentRegistrationHandler(PersonService<SupportStaffMember> personService, SetLastMessageCallback setLastMessageCallback) {
+        this.personService = personService;
         this.setLastMessageCallback = setLastMessageCallback;
     }
 
-    /*
-     * Manages the registration process for an agent. Prompts for and validates the agent's 
-     * name, username, email, and password. Handles cases where the user might want to go back 
-     * to the previous step or if the input is invalid.
-     * 
-     * Saves the agent details and updates the relevant files and states upon successful registration.
-     */
-    public void handleRegistration(Scanner scanner) {
-        String name;
-        do {
-            System.out.print("Enter agent name (or type 'x' to go back): ");
-            name = scanner.nextLine();
-            if ("x".equalsIgnoreCase(name)) {
+    public void handleRegistration(JFrame frame) {
+        JPanel panel = new JPanel(new GridLayout(6, 2, 10, 10)); // Increase rows
+
+        JLabel firstNameLabel = new JLabel("Enter agent first name:");
+        JTextField firstNameField = new JTextField();
+        JLabel lastNameLabel = new JLabel("Enter agent last name:");
+        JTextField lastNameField = new JTextField();
+        JLabel usernameLabel = new JLabel("Enter agent username:");
+        JTextField usernameField = new JTextField();
+        JLabel emailLabel = new JLabel("Enter agent email:");
+        JTextField emailField = new JTextField();
+        JLabel passwordLabel = new JLabel("Enter agent password:");
+        JPasswordField passwordField = new JPasswordField();
+
+        panel.add(firstNameLabel);
+        panel.add(firstNameField);
+        panel.add(lastNameLabel);
+        panel.add(lastNameField);
+        panel.add(usernameLabel);
+        panel.add(usernameField);
+        panel.add(emailLabel);
+        panel.add(emailField);
+        panel.add(passwordLabel);
+        panel.add(passwordField);
+
+        int option = JOptionPane.showConfirmDialog(frame, panel, "Agent Registration", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option == JOptionPane.OK_OPTION) {
+            String firstName = firstNameField.getText();
+            String lastName = lastNameField.getText();
+            String username = usernameField.getText();
+            String email = emailField.getText();
+            char[] passwordChars = passwordField.getPassword();
+            String password = new String(passwordChars);
+
+            if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please fill in all fields.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            if (!isValidName(name)) {
-                System.out.println("Invalid name. Name must be at least 3 letters long. Please try again.");
-            }
-        } while (!isValidName(name));
 
-        String username;
-        do {
-            System.out.print("Enter agent username (or type 'x' to go back): ");
-            username = scanner.nextLine();
-            if ("x".equalsIgnoreCase(username)) {
-                return;
+            if (personService.findPersonByUsername(username) != null) {
+                JOptionPane.showMessageDialog(frame, "An account with this username already exists. Please use a different username.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
+            } else {
+                SupportStaffMember agent = new SupportStaffMember(0, firstName, lastName, username, email, password);
+                saveAgent(agent);
             }
-            if (agentService.findPersonByUsername(username) != null) {
-                System.out.println("Username already exists. Please choose a different username.");
-            }
-        } while (agentService.findPersonByUsername(username) != null);
-
-        String email;
-        do {
-            System.out.print("Enter agent email (or type 'x' to go back): ");
-            email = scanner.nextLine();
-            if ("x".equalsIgnoreCase(email)) {
-                return;
-            }
-            if (!EmailUtil.isValidEmail(email)) {
-                System.out.println("Invalid email format. Please try again.");
-            }
-        } while (!EmailUtil.isValidEmail(email));
-
-        if (agentService.findPersonByEmail(email) != null) {
-            System.out.println("An account with this email already exists. Please use a different email.");
-            return;
         }
-
-        String password;
-        String validationMessage;
-        do {
-            System.out.print("Enter agent password (or type 'x' to go back): ");
-            password = scanner.nextLine();
-            if ("x".equalsIgnoreCase(password)) {
-                return;
-            }
-            validationMessage = PasswordUtil.validatePassword(password);
-            if (validationMessage != null) {
-                System.out.println(validationMessage);
-            }
-        } while (validationMessage != null);
-
-        // Hash the password before saving
-        String hashedPassword = PasswordUtil.hashPassword(password);
-
-        // Create and save the new agent
-        int id = nextAgentId++;
-        SupportStaffMember agent = new SupportStaffMember(id, username, email, hashedPassword);
-        agentService.addPerson(agent);
-        updateNextAgentIdCallback.update(nextAgentId);
-
-        // Save the agent details to the file
-        FileUtil.appendAgentToFile(ServiceDeskSystem.AGENTS_FILE, agent);
-
-        // Notify the user of successful registration
-        setLastMessageCallback.set("Agent registered successfully. Your agent ID is " + id);
     }
 
-    /*
-     * Validates the agent's name based on a predefined pattern.
-     * 
-     * Ensures the name consists of at least 3 letters.
-     * 
-     */
-    private boolean isValidName(String name) {
-        Matcher matcher = NAME_PATTERN.matcher(name);
-        return matcher.matches();
+    private void saveAgent(SupportStaffMember agent) {
+        agent.setFirstName(capitalizeFirstLetter(agent.getFirstName()));
+        agent.setLastName(capitalizeFirstLetter(agent.getLastName()));
+
+        personService.addPerson(agent);
+        setLastMessageCallback.set("Agent registered successfully.");
     }
 
-    @FunctionalInterface
-    public interface UpdateNextAgentIdCallback {
-        /*
-         * Updates the next agent ID after a new agent is registered.
-         * 
-         * This callback is used to set the next ID to be used for new agents.
-         */
-        void update(int nextAgentId);
+    private String capitalizeFirstLetter(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
     }
 
     @FunctionalInterface
     public interface SetLastMessageCallback {
-        /**
-         * Sets a message to reflect the outcome of the registration process.
-         * 
-         * Allows the system to provide feedback to the user regarding the registration status.
-         * 
-         */
         void set(String message);
     }
 }
