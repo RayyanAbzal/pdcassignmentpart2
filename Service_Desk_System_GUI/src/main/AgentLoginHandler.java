@@ -6,8 +6,10 @@ package main;
 
 import service.desk.system.SupportStaffMember;
 import services.PersonService;
-import util.PasswordUtil;
-import java.util.Scanner;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 /**
  *
  * @author rayyanabzal
@@ -21,76 +23,50 @@ import java.util.Scanner;
  * and handles cases where the user might want to go back to the main menu.
  */
 public class AgentLoginHandler {
-    private PersonService<SupportStaffMember> agentService;
-    private SetLastMessageCallback setLastMessageCallback;
+    private final PersonService<SupportStaffMember> agentService;
+    private final SetLastMessageCallback setLastMessageCallback;
+    private final ServiceDeskSystem serviceDeskSystem;
 
-    /*
-     * Constructs an instance of AgentLoginHandler with the specified agent service and message callback.
-     * 
-     * Sets up the necessary service for agent management and the callback to update messages 
-     * based on the login process.
-     */
-    public AgentLoginHandler(PersonService<SupportStaffMember> agentService, SetLastMessageCallback setLastMessageCallback) {
+    public AgentLoginHandler(PersonService<SupportStaffMember> agentService, SetLastMessageCallback setLastMessageCallback, ServiceDeskSystem serviceDeskSystem) {
         this.agentService = agentService;
         this.setLastMessageCallback = setLastMessageCallback;
+        this.serviceDeskSystem = serviceDeskSystem;
     }
 
-    /*
-     * Handles the login process for agents. Prompts for a username and password, and checks 
-     * if the entered credentials match an existing agent.
-     * 
-     * Continues to ask for credentials until a successful login occurs or the user chooses to go back.
-     * 
-     * Uses the provided scanner for input and interacts with the agent service to validate the 
-     * credentials.
-     */
-    public SupportStaffMember handleLogin(Scanner scanner) {
-        SupportStaffMember agent = null;
-        while (agent == null) {
-            System.out.print("Enter agent username (or 'x' to go back): ");
-            String username = scanner.nextLine();
+    public void handleLogin(JFrame frame) {
+    JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
 
-            // Check if user wants to return to the main menu
-            if ("x".equalsIgnoreCase(username)) {
-                setLastMessageCallback.set("Returning to the main menu.");
-                return null;
-            }
+    JLabel usernameLabel = new JLabel("Enter your username:");
+    JTextField usernameField = new JTextField();
+    JLabel passwordLabel = new JLabel("Enter your password:");
+    JPasswordField passwordField = new JPasswordField();
 
-            // Attempt to find the agent with the provided username
-            agent = agentService.findPersonByUsername(username);
-            if (agent == null) {
-                setLastMessageCallback.set("Agent not found. Please check the username and try again.");
-                continue;
-            }
+    panel.add(usernameLabel);
+    panel.add(usernameField);
+    panel.add(passwordLabel);
+    panel.add(passwordField);
 
-            System.out.print("Enter password (or 'x' to go back): ");
-            String password = scanner.nextLine();
+    int option = JOptionPane.showConfirmDialog(frame, panel, "Agent Login", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+    if (option == JOptionPane.OK_OPTION) {
+        String username = usernameField.getText();
+        char[] passwordChars = passwordField.getPassword();
+        String password = new String(passwordChars);
 
-            // Check if user wants to return to the main menu
-            if ("x".equalsIgnoreCase(password)) {
-                setLastMessageCallback.set("Returning to the main menu.");
-                return null;
-            }
-
-            // Validate the provided password
-            if (PasswordUtil.verifyPassword(agent.getPassword(), password)) {
-                setLastMessageCallback.set("Login successful.");
-                return agent; // Successful login
-            } else {
-                setLastMessageCallback.set("Incorrect password. Please try again.");
-                agent = null; // Reset agent to retry login
-            }
+        SupportStaffMember agent = agentService.findPersonByUsername(username);
+        if (agent != null && password.equals(agent.getPassword())) {
+            // Set user info in UserSession
+            UserSession.getInstance().setUserInfo("Agent", agent.getEmail(), agent.getFirstName() + " " + agent.getLastName(), agent.getUsername(), agent.getId());
+            setLastMessageCallback.set("Login successful! Welcome, " + agent.getUsername());
+            // Switch to agent menu
+            serviceDeskSystem.showAgentMenu(agent);
+        } else {
+            JOptionPane.showMessageDialog(frame, "Invalid username or password. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
         }
-        return null; // ensures the method always returns something
     }
+}
 
     @FunctionalInterface
     public interface SetLastMessageCallback {
-        /*
-         * Updates the message for the login process.
-         * 
-         * This interface allows setting a message that reflects the current status of the login attempt.
-         */
         void set(String message);
     }
 }
