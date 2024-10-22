@@ -73,7 +73,7 @@ public class PersonService<T> {
 
     public List<SupportStaffMember> getAllSupportStaff() {
         List<SupportStaffMember> supportStaff = new ArrayList<>();
-        String querySQL = "SELECT id, username, email, password FROM supportstaff"; // Modify based on your table structure
+        String querySQL = "SELECT id, firstName, lastName, username, email, password FROM supportstaff"; // Modify based on your table structure
         
         try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(querySQL)) {
             while (rs.next()) {
@@ -121,7 +121,7 @@ public class PersonService<T> {
             return null; // Only valid for SupportStaffMember
         }
 
-        String querySQL = "SELECT id, username, email, password FROM supportstaff WHERE username = ?";
+        String querySQL = "SELECT id, firstName, lastName, username, email, password FROM supportstaff WHERE username = ?";
         try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
             stmt.setString(1, username);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -159,19 +159,19 @@ public class PersonService<T> {
     private String getInsertSQL() {
         if (type.equals(Customer.class)) {
             // Remove ID from the insert statement
-            return "INSERT INTO customers (name, email, password) VALUES (?, ?, ?)";
+            return "INSERT INTO customers (firstName, lastName, email, password) VALUES (?, ?, ?, ?)";
         } else if (type.equals(SupportStaffMember.class)) {
             // Remove ID from the insert statement
-            return "INSERT INTO supportstaff (username, email, password) VALUES (?, ?, ?)";
+            return "INSERT INTO supportstaff (firstName, lastName, username, email, password) VALUES (?, ?, ?, ?, ?)";
         }
         return null; // Invalid type
     }
 
     private String getSelectSQL() {
         if (type.equals(Customer.class)) {
-            return "SELECT id, name, email, password FROM customers";
+            return "SELECT id, firstName, lastName, email, password FROM customers";
         } else if (type.equals(SupportStaffMember.class)) {
-            return "SELECT id, username, email, password FROM supportstaff";
+            return "SELECT id, firstName, lastName, username, email, password FROM supportstaff";
         }
         return null; // Invalid type
     }
@@ -180,15 +180,18 @@ public class PersonService<T> {
         if (person instanceof Customer) {
             Customer customer = (Customer) person;
             // No need to set the ID here as it is auto-generated
-            stmt.setString(1, customer.getName()); // Set name
-            stmt.setString(2, customer.getEmail());
-            stmt.setString(3, customer.getPassword());
+            stmt.setString(1, customer.getFirstName()); // Set first name
+            stmt.setString(2, customer.getLastName());  // Set last name
+            stmt.setString(3, customer.getEmail());
+            stmt.setString(4, customer.getPassword());
         } else if (person instanceof SupportStaffMember) {
             SupportStaffMember staff = (SupportStaffMember) person;
             // No need to set the ID here as it is auto-generated
-            stmt.setString(1, staff.getUsername());
-            stmt.setString(2, staff.getEmail());
-            stmt.setString(3, staff.getPassword());
+            stmt.setString(1, staff.getFirstName()); // Set first name
+            stmt.setString(2, staff.getLastName());  // Set last name
+            stmt.setString(3, staff.getUsername());
+            stmt.setString(4, staff.getEmail());
+            stmt.setString(5, staff.getPassword());
         }
     }
 
@@ -196,13 +199,16 @@ public class PersonService<T> {
         if (type.equals(Customer.class)) {
             return type.cast(new Customer(
                     rs.getInt("id"),
-                    rs.getString("name"),
+                    rs.getString("firstName"),
+                    rs.getString("lastName"),
                     rs.getString("email"),
                     rs.getString("password")
             ));
         } else if (type.equals(SupportStaffMember.class)) {
             return type.cast(new SupportStaffMember(
                     rs.getInt("id"),
+                    rs.getString("firstName"),
+                    rs.getString("lastName"),
                     rs.getString("username"),
                     rs.getString("email"),
                     rs.getString("password")
