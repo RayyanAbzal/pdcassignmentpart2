@@ -15,15 +15,17 @@ package service.desk.system;
  */
 public abstract class Person {
     private int id; // Unique ID for each person
-    private String name; // The person's name
+    private String firstName; // The person's first name
+    private String lastName; // The person's last name
     private String email; // The person's email address
 
     /**
-     * Constructor to create a person with an ID, name, and email.
+     * Constructor to create a person with an ID, first name, last name, and email.
      */
-    public Person(int id, String name, String email){
+    public Person(int id, String firstName, String lastName, String email) {
         this.id = id;
-        this.name = name;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.email = email;
     }
 
@@ -44,15 +46,15 @@ public abstract class Person {
     /**
      * Gets the name of the person.
      */
-    public String getName() {
-        return name;
+    public String getFirstName() {
+        return firstName;
     }
 
     /**
      * Sets a new name for the person.
      */
-    public void setName(String name) {
-        this.name = name;
+    public String getLastName() {
+        return lastName;
     }
 
     /**
@@ -73,11 +75,26 @@ public abstract class Person {
      * Returns a string that summarizes the person's details: ID, name, and email.
      */
     @Override
-    public String toString(){
+    public String toString() {
         return "Person{" +
                 "id=" + id +
-                ", name='" + name + '\'' +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
                 '}';
+    }
+
+    /**
+     * @param firstName the firstName to set
+     */
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    /**
+     * @param lastName the lastName to set
+     */
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 }

@@ -15,9 +15,9 @@ package service.desk.system;
 public class Customer extends Person implements Authenticated {
     private String password; // Holds the hashed password for the customer
 
-    // Updated constructor to include name
-    public Customer(int id, String name, String email, String password) {
-        super(id, name, email);
+    // Updated constructor to include first name, last name, and email
+    public Customer(int id, String firstName, String lastName, String email, String password) {
+        super(id, firstName, lastName, email); // Call to Person constructor with first name and last name
         this.password = password; // Set the hashed password
     }
 
@@ -47,7 +47,7 @@ public class Customer extends Person implements Authenticated {
     public String toString() {
         return "Customer{" +
                 "id=" + getId() +
-                ", name='" + getName() + '\'' +
+                ", name='" + getFirstName() + " " + getLastName() + '\'' +
                 ", email='" + getEmail() + '\'' +
                 '}';
     }
