@@ -8,10 +8,12 @@ import service.desk.system.Customer;
 import services.PersonService;
 import util.EmailUtil;
 import util.PasswordUtil;
-import java.util.Scanner;
-import util.DatabaseUtil;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.sql.SQLException;
-import main.CustomerLoginHandler.SetLastMessageCallback;
+import util.DatabaseUtil;
 
 
 /**
@@ -28,63 +30,74 @@ import main.CustomerLoginHandler.SetLastMessageCallback;
  * with the new customer details.
  */
 public class CustomerRegistrationHandler {
-    private final PersonService<Customer> customerService;
+    private final PersonService<Customer> personService;
     private final SetLastMessageCallback setLastMessageCallback;
 
-    public CustomerRegistrationHandler(PersonService<Customer> customerService, SetLastMessageCallback setLastMessageCallback) {
-        this.customerService = customerService;
+    public CustomerRegistrationHandler(PersonService<Customer> personService, SetLastMessageCallback setLastMessageCallback) {
+        this.personService = personService;
         this.setLastMessageCallback = setLastMessageCallback;
     }
 
-    public void handleRegistration(Scanner scanner) {
-    try {
-        String name = promptForInput(scanner, "Enter customer name (or type 'x' to go back): ", this::isValidName);
-        if (name == null) return;
+    public void handleRegistration(JFrame frame) {
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10)); // Increase rows
 
-        String email = promptForInput(scanner, "Enter customer email (or type 'x' to go back): ", EmailUtil::isValidEmail);
-        if (email == null || customerService.findPersonByEmail(email) != null) {
-            if (email != null) {
-                setLastMessageCallback.set("An account with this email already exists. Please use a different email.");
+        JLabel firstNameLabel = new JLabel("Enter customer first name:");
+        JTextField firstNameField = new JTextField();
+        JLabel lastNameLabel = new JLabel("Enter customer last name:");
+        JTextField lastNameField = new JTextField();
+        JLabel emailLabel = new JLabel("Enter customer email:");
+        JTextField emailField = new JTextField();
+        JLabel passwordLabel = new JLabel("Enter customer password:");
+        JPasswordField passwordField = new JPasswordField();
+
+        panel.add(firstNameLabel);
+        panel.add(firstNameField);
+        panel.add(lastNameLabel);
+        panel.add(lastNameField);
+        panel.add(emailLabel);
+        panel.add(emailField);
+        panel.add(passwordLabel);
+        panel.add(passwordField);
+
+        int option = JOptionPane.showConfirmDialog(frame, panel, "Customer Registration", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option == JOptionPane.OK_OPTION) {
+            String firstName = firstNameField.getText();
+            String lastName = lastNameField.getText();
+            String email = emailField.getText();
+            char[] passwordChars = passwordField.getPassword();
+            String password = new String(passwordChars);
+
+            if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please fill in all fields.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
+                return;
             }
-            return;
-        }
 
-        String password = promptForInput(scanner, "Enter customer password (or type 'x' to go back): ", PasswordUtil::validatePassword);
-        if (password == null) return;
-
-        Customer customer = new Customer(0, name, email, password);
-        saveCustomer(customer);
-    } catch (Exception e) {
-        e.printStackTrace(); // Print stack trace to identify where the error occurs
-        setLastMessageCallback.set("An unexpected error occurred: " + e.getMessage());
-    }
-}
-
-    private String promptForInput(Scanner scanner, String prompt, InputValidator validator) {
-        while (true) {
-            System.out.print(prompt);
-            String input = scanner.nextLine();
-            if ("x".equalsIgnoreCase(input)) return null;
-            if (validator.isValid(input)) return input;
-            System.out.println("Invalid input. Please try again.");
+            if (personService.findPersonByEmail(email) != null) {
+                JOptionPane.showMessageDialog(frame, "An account with this email already exists. Please use a different email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
+            } else {
+                Customer customer = new Customer(0, firstName, lastName, email, password);
+                saveCustomer(customer);
+            }
         }
     }
 
     private void saveCustomer(Customer customer) {
-        try {
-            int generatedId = DatabaseUtil.insertCustomer(customer);
-            setLastMessageCallback.set("Customer registered successfully. Your customer ID is " + generatedId);
-        } catch (SQLException e) {
-            setLastMessageCallback.set("Error occurred while saving the customer: " + e.getMessage());
-        }
+        customer.setFirstName(capitalizeFirstLetter(customer.getFirstName()));
+        customer.setLastName(capitalizeFirstLetter(customer.getLastName()));
+
+        personService.addPerson(customer);
+        setLastMessageCallback.set("Customer registered successfully.");
     }
 
-    private boolean isValidName(String name) {
-        return name.length() >= 3; // Validate name length
+    private String capitalizeFirstLetter(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
     }
 
     @FunctionalInterface
-    public interface InputValidator {
-        boolean isValid(String input);
+    public interface SetLastMessageCallback {
+        void set(String message);
     }
 }
