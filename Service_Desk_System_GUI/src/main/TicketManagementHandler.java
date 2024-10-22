@@ -13,7 +13,9 @@ import java.sql.SQLException;
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import service.desk.system.Message;
 import util.DatabaseUtil;
 
 /**
@@ -36,77 +38,97 @@ public class TicketManagementHandler {
     }
 
     public void handleViewMyTickets(JFrame frame) {
-        // Retrieve the current user session
         UserSession session = UserSession.getInstance();
 
-        // Ensure the user is a customer
         if (!session.getRole().equals("Customer")) {
-            JOptionPane.showMessageDialog(frame, "Only customers can view their tickets.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            showErrorDialog(frame, "Only customers can view their tickets.", "Access Denied");
             return;
         }
 
-        // Retrieve customer tickets from the service
         Customer customer = customerService.findPersonByEmail(session.getEmail());
         if (customer == null) {
-            JOptionPane.showMessageDialog(frame, "Customer not found.", "Ticket Retrieval Failed", JOptionPane.ERROR_MESSAGE);
+            showErrorDialog(frame, "Customer not found.", "Ticket Retrieval Failed");
             return;
         }
 
         List<Ticket> tickets = ticketService.findTicketsByCustomer(customer);
         if (tickets == null || tickets.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "No tickets found.", "Ticket Retrieval", JOptionPane.INFORMATION_MESSAGE);
+            showInfoDialog(frame, "No tickets found.", "Ticket Retrieval");
             return;
         }
 
-        // Create a JList to display the tickets
-        DefaultListModel<Ticket> listModel = new DefaultListModel<>();
-        for (Ticket ticket : tickets) {
-            listModel.addElement(ticket);
+        // Sort tickets by priority (highest to lowest)
+        tickets.sort(Comparator.comparingInt(Ticket::getPriority).reversed());
+
+        displayTickets(frame, tickets, "Your Tickets", true);
+    }
+
+    public void handleViewAssignedTickets(JFrame frame) {
+        UserSession session = UserSession.getInstance();
+
+        if (!session.getRole().equals("Agent")) {
+            showErrorDialog(frame, "Only agents can view assigned tickets.", "Access Denied");
+            return;
         }
+
+        SupportStaffMember agent = agentService.findPersonByEmail(session.getEmail());
+        if (agent == null) {
+            showErrorDialog(frame, "Agent not found.", "Ticket Retrieval Failed");
+            return;
+        }
+
+        List<Ticket> tickets = ticketService.getTicketsAssignedToAgent(agent);
+        if (tickets == null || tickets.isEmpty()) {
+            showInfoDialog(frame, "No assigned tickets found.", "Ticket Retrieval");
+            return;
+        }
+
+        // Sort tickets by priority (highest to lowest)
+        tickets.sort(Comparator.comparingInt(Ticket::getPriority).reversed());
+
+        displayTickets(frame, tickets, "Assigned Tickets", false);
+    }
+
+    private void displayTickets(JFrame frame, List<Ticket> tickets, String title, boolean isCustomer) {
+        DefaultListModel<Ticket> listModel = new DefaultListModel<>();
+        tickets.forEach(listModel::addElement);
+
         JList<Ticket> ticketList = new JList<>(listModel);
         ticketList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // Add a mouse listener to handle double-clicks on the tickets
         ticketList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 Ticket selectedTicket = ticketList.getSelectedValue();
                 if (selectedTicket != null) {
-                    showTicketDetails(frame, selectedTicket, listModel); // Pass the list model to the method
+                    if (isCustomer) {
+                        showTicketDetails(frame, selectedTicket, listModel);
+                    } else {
+                        showAgentTicketDetails(frame, selectedTicket, listModel);
+                    }
                 }
             }
         });
 
         JScrollPane scrollPane = new JScrollPane(ticketList);
-        JOptionPane.showMessageDialog(frame, scrollPane, "Your Tickets", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(frame, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showAgentTicketDetails(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
+        JPanel panel = createTicketDetailsPanel(ticket);
+        JButton setPriorityButton = createPriorityButton(frame, ticket);
+        JButton resolveButton = createResolveButton(frame, ticket, listModel);
+        JButton messageButton = createMessageButton(frame, ticket);
+
+        panel.add(setPriorityButton);
+        panel.add(resolveButton);
+        panel.add(messageButton);
+
+        JOptionPane.showMessageDialog(frame, panel, "Ticket Details", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void showTicketDetails(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
-        // Create a panel to show ticket details
-        JPanel panel = new JPanel(new GridLayout(0, 1));
-        panel.add(new JLabel("Ticket ID: " + ticket.getId()));
-        panel.add(new JLabel("Topic: " + ticket.getTopic()));
-        panel.add(new JLabel("Content: " + ticket.getContent()));
-        panel.add(new JLabel("Status: " + ticket.getStatus()));
-        panel.add(new JLabel("Created on: " + ticket.getCreatedAt()));
-
-        JButton closeButton = new JButton("Close Ticket");
-        closeButton.addActionListener(e -> {
-            int result = JOptionPane.showConfirmDialog(frame, "Are you sure you want to close this ticket?", "Close Ticket", JOptionPane.YES_NO_OPTION);
-            if (result == JOptionPane.YES_OPTION) {
-                ticketService.resolveTicket(ticket.getId()); // Use resolveTicket method to close the ticket
-                listModel.removeElement(ticket); // Remove the closed ticket from the list
-                JOptionPane.showMessageDialog(frame, "Ticket closed successfully.");
-            }
-        });
-
-        JButton messageButton = new JButton("Message Agent");
-        messageButton.addActionListener(e -> {
-            String message = JOptionPane.showInputDialog(frame, "Enter your message:");
-            if (message != null && !message.trim().isEmpty()) {
-                // Implement message sending logic here
-                JOptionPane.showMessageDialog(frame, "Message sent to the agent.");
-            }
-        });
+        JPanel panel = createTicketDetailsPanel(ticket);
+        JButton closeButton = createCloseButton(frame, ticket, listModel);
+        JButton messageButton = createMessageButton(frame, ticket);
 
         panel.add(closeButton);
         panel.add(messageButton);
@@ -114,80 +136,258 @@ public class TicketManagementHandler {
         JOptionPane.showMessageDialog(frame, panel, "Ticket Details", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    public void handleTicketCreation(JFrame frame) {
-    // Retrieve the current user session
-    UserSession session = UserSession.getInstance();
+    private JPanel createTicketDetailsPanel(Ticket ticket) {
+    JPanel panel = new JPanel(new GridBagLayout());
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(5, 5, 5, 5); // Adding some padding
 
-    // Ensure that the current user is a customer
-    if (!session.getRole().equals("Customer")) {
-        JOptionPane.showMessageDialog(frame, "Only customers can create tickets.", "Access Denied", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    panel.add(new JLabel("Ticket ID: " + ticket.getId()), gbc);
 
-    // Get customer from session
-    Customer customer = customerService.findPersonByEmail(session.getEmail());
+    gbc.gridy++;
+    panel.add(new JLabel("Topic: " + ticket.getTopic()), gbc);
 
-    if (customer == null) {
-        JOptionPane.showMessageDialog(frame, "Customer not found.", "Ticket Creation Failed", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
+    gbc.gridy++;
+    panel.add(new JLabel("Content: " + ticket.getContent()), gbc);
 
-    // Create UI elements for entering ticket details (topic and content)
-    JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
-    JLabel topicLabel = new JLabel("Enter ticket topic:");
-    JTextField topicField = new JTextField();
-    JLabel contentLabel = new JLabel("Enter ticket content:");
-    JTextArea contentArea = new JTextArea(5, 20);
+    gbc.gridy++;
+    panel.add(new JLabel("Status: " + ticket.getStatus()), gbc);
 
-    panel.add(topicLabel);
-    panel.add(topicField);
-    panel.add(contentLabel);
-    panel.add(new JScrollPane(contentArea));
+    gbc.gridy++;
+    panel.add(new JLabel("Priority: " + ticket.getPriority()), gbc);
 
-    int option = JOptionPane.showConfirmDialog(frame, panel, "Create Ticket", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-    if (option == JOptionPane.OK_OPTION) {
-        String topic = topicField.getText();
-        String content = contentArea.getText();
+    gbc.gridy++;
+    panel.add(new JLabel("Created on: " + ticket.getCreatedAt()), gbc);
 
-        SupportStaffMember agent = getAvailableAgent();
-        if (agent == null) {
-            JOptionPane.showMessageDialog(frame, "No available agents. Please try again later.", "Ticket Creation Failed", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Retrieve the maximum ticket ID from the database and increment it for the new ticket
-        int ticketId;
-        try {
-            ticketId = DatabaseUtil.getMaxTicketId() + 1; // Increment the maximum ID
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(frame, "Error retrieving the ticket ID: " + e.getMessage(), "Ticket Creation Failed", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        Ticket ticket = new Ticket(ticketId, customer, agent, topic, content, LocalDateTime.now(), 1);
-        ticketService.addTicket(ticket); // Ensure this method properly saves the ticket
-
-        JOptionPane.showMessageDialog(frame, "Ticket created successfully. Ticket ID: " + ticketId, "Success", JOptionPane.INFORMATION_MESSAGE);
-    }
+    return panel;
 }
 
-    private SupportStaffMember getAvailableAgent() {
-        List<SupportStaffMember> agents = agentService.getAllSupportStaff(); // Ensure this method exists and returns a list
-        SupportStaffMember selectedAgent = null;
-        int minTickets = Integer.MAX_VALUE;
+    private JButton createPriorityButton(JFrame frame, Ticket ticket) {
+        JButton button = new JButton("Set Priority (1-3)");
+        button.addActionListener(e -> {
+            String priorityStr = JOptionPane.showInputDialog(frame, "Enter priority (1-3):");
+            if (priorityStr != null && priorityStr.matches("[1-3]")) {
+                int priority = Integer.parseInt(priorityStr);
+                ticket.setPriority(priority);
+                updateTicket(frame, ticket, "Priority set to " + priority);
+            } else {
+                showErrorDialog(frame, "Invalid priority. Please enter a number between 1 and 3.", "Error");
+            }
+        });
+        return button;
+    }
 
-        for (SupportStaffMember agent : agents) {
-            int ticketCount = ticketService.getAssignedTicketCount(agent); // Ensure this method exists and returns an int
-            if (ticketCount < minTickets) {
-                minTickets = ticketCount;
-                selectedAgent = agent;
-            } else if (ticketCount == minTickets && selectedAgent != null) {
-                // Randomly select between the current selected agent and this agent
-                selectedAgent = Math.random() < 0.5 ? selectedAgent : agent;
+    private JButton createResolveButton(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
+        JButton button = new JButton("Resolve Ticket");
+        button.addActionListener(e -> {
+            int result = JOptionPane.showConfirmDialog(frame, "Are you sure you want to resolve this ticket?", "Resolve Ticket", JOptionPane.YES_NO_OPTION);
+            if (result == JOptionPane.YES_OPTION) {
+                ticketService.resolveTicket(ticket.getId());
+                JOptionPane.showMessageDialog(frame, "Ticket resolved successfully.");
+                listModel.removeElement(ticket);
+            }
+        });
+        return button;
+    }
+
+    private JButton createCloseButton(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
+        JButton button = new JButton("Close Ticket");
+        button.addActionListener(e -> {
+            int result = JOptionPane.showConfirmDialog(frame, "Are you sure you want to close this ticket?", "Close Ticket", JOptionPane.YES_NO_OPTION);
+            if (result == JOptionPane.YES_OPTION) {
+                ticketService.resolveTicket(ticket.getId());
+                listModel.removeElement(ticket);
+                JOptionPane.showMessageDialog(frame, "Ticket closed successfully.");
+            }
+        });
+        return button;
+    }
+
+    private JButton createMessageButton(JFrame frame, Ticket ticket) {
+    JButton button = new JButton("Leave/View Messages");
+    button.addActionListener(e -> {
+    // Fetch the messages for the selected ticket
+    List<Message> messages = null;
+    try {
+        messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
+    } catch (SQLException ex) {
+        showErrorDialog(frame, "Error retrieving messages: " + ex.getMessage(), "Error");
+        return;
+    }
+
+    // Create a panel to show the messages and allow the user to input a new message
+    JPanel messagePanel = new JPanel(new BorderLayout());
+
+    // Text Area to display messages
+    JTextArea messageArea = new JTextArea(10, 30);
+    messageArea.setEditable(false);
+    StringBuilder messageDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
+
+    if (messages != null && !messages.isEmpty()) {
+        for (Message message : messages) {
+            messageDisplay.append(message.getTimestamp())
+                .append(" - [").append(message.getSenderType())
+                .append("] ").append(message.getSenderName())
+                .append(": ").append(message.getContent())
+                .append("\n");
+        }
+    } else {
+        messageDisplay.append("No messages yet.\n");
+    }
+
+    messageArea.setText(messageDisplay.toString());
+    JScrollPane scrollPane = new JScrollPane(messageArea);
+    messagePanel.add(scrollPane, BorderLayout.CENTER);
+
+    // Text field for adding new messages
+    JTextField newMessageField = new JTextField();
+    messagePanel.add(new JLabel("Enter your message:"), BorderLayout.NORTH);
+    messagePanel.add(newMessageField, BorderLayout.SOUTH);
+
+    int result = JOptionPane.showConfirmDialog(frame, messagePanel, "Messages", JOptionPane.OK_CANCEL_OPTION);
+
+    if (result == JOptionPane.OK_OPTION) {
+        String newMessageContent = newMessageField.getText().trim();
+        if (!newMessageContent.isEmpty()) {
+            UserSession session = UserSession.getInstance();
+
+            // Validate ticket ID, sender type, and sender name
+            if (ticket.getId() <= 0) {
+                showErrorDialog(frame, "Invalid ticket ID.", "Error");
+                return;
+            }
+
+            String senderType = session.getRole();
+            String senderName = session.getName();
+
+            if (senderType == null || senderType.isEmpty()) {
+                showErrorDialog(frame, "Sender type cannot be null or empty.", "Error");
+                return;
+            }
+
+            if (senderName == null || senderName.isEmpty()) {
+                showErrorDialog(frame, "Sender name cannot be null or empty.", "Error");
+                return;
+            }
+
+            // Check if the ticket exists in the database
+            try {
+                if (!DatabaseUtil.ticketExists(ticket.getId())) {
+                    showErrorDialog(frame, "Ticket does not exist.", "Error");
+                    return;
+                }
+            } catch (SQLException ex) {
+                showErrorDialog(frame, "Error checking ticket existence: " + ex.getMessage(), "Error");
+                return;
+            }
+
+            Message newMessage = new Message(0, ticket.getId(), senderType, senderName, newMessageContent, LocalDateTime.now());
+
+            try {
+                // Add the message to the database using the new Message object
+                DatabaseUtil.insertMessage(newMessage);
+                // Refresh messages after sending
+                messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
+                StringBuilder updatedDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
+
+                for (Message message : messages) {
+                    updatedDisplay.append(message.getTimestamp())
+                        .append(" - [").append(message.getSenderType())
+                        .append("] ").append(message.getSenderName())
+                        .append(": ").append(message.getContent())
+                        .append("\n");
+                }
+
+                messageArea.setText(updatedDisplay.toString());
+                JOptionPane.showMessageDialog(frame, "Message sent successfully.");
+            } catch (SQLException ex) {
+                showErrorDialog(frame, "Error sending message: " + ex.getMessage(), "Error");
             }
         }
+    }
+});
+    return button;
+}
 
-        return selectedAgent;
+
+    public void handleTicketCreation(JFrame frame) {
+        UserSession session = UserSession.getInstance();
+
+        if (!session.getRole().equals("Customer")) {
+            showErrorDialog(frame, "Only customers can create tickets.", "Access Denied");
+            return;
+        }
+
+        Customer customer = customerService.findPersonByEmail(session.getEmail());
+        if (customer == null) {
+            showErrorDialog(frame, "Customer not found.", "Ticket Creation Failed");
+            return;
+        }
+
+        JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
+        JTextField topicField = new JTextField();
+        JTextArea contentArea = new JTextArea(5, 20);
+        panel.add(new JLabel("Enter ticket topic:"));
+        panel.add(topicField);
+        panel.add(new JLabel("Enter ticket content:"));
+        panel.add(new JScrollPane(contentArea));
+
+        int option = JOptionPane.showConfirmDialog(frame, panel, "Create Ticket", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option == JOptionPane.OK_OPTION) {
+            createTicket(frame, customer, topicField.getText(), contentArea.getText());
+        }
+    }
+
+    private void createTicket(JFrame frame, Customer customer, String topic, String content) {
+        SupportStaffMember agent = getAvailableAgent();
+        if (agent == null) {
+            showErrorDialog(frame, "No available agents. Please try again later.", "Ticket Creation Failed");
+            return;
+        }
+
+        int ticketId = fetchNextTicketId(frame);
+        if (ticketId == -1) return;
+
+        Ticket ticket = new Ticket(ticketId, customer, agent, topic, content, LocalDateTime.now(), 1);
+        ticketService.addTicket(ticket);
+        showInfoDialog(frame, "Ticket created successfully. Ticket ID: " + ticketId, "Success");
+    }
+
+    private int fetchNextTicketId(JFrame frame) {
+        try {
+            return DatabaseUtil.getMaxTicketId() + 1;
+        } catch (SQLException e) {
+            showErrorDialog(frame, "Error retrieving the ticket ID: " + e.getMessage(), "Ticket Creation Failed");
+            return -1;
+        }
+    }
+
+    private SupportStaffMember getAvailableAgent() {
+        List<SupportStaffMember> agents = agentService.getAllSupportStaff();
+        return agents.stream()
+                .reduce((a, b) -> {
+                    int countA = ticketService.getAssignedTicketCount(a);
+                    int countB = ticketService.getAssignedTicketCount(b);
+                    return (countA < countB) ? a : (countA == countB ? Math.random() < 0.5 ? a : b : b);
+                }).orElse(null);
+    }
+
+    private void updateTicket(JFrame frame, Ticket ticket, String successMessage) {
+        try {
+            DatabaseUtil.updateTicket(ticket);
+            showInfoDialog(frame, successMessage, "Success");
+        } catch (SQLException ex) {
+            showErrorDialog(frame, "Failed to update ticket: " + ex.getMessage(), "Error");
+        }
+    }
+
+    private void showErrorDialog(JFrame frame, String message, String title) {
+        JOptionPane.showMessageDialog(frame, message, title, JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void showInfoDialog(JFrame frame, String message, String title) {
+        JOptionPane.showMessageDialog(frame, message, title, JOptionPane.INFORMATION_MESSAGE);
     }
 
     @FunctionalInterface
