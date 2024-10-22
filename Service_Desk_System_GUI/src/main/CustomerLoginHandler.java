@@ -8,12 +8,10 @@ package main;
 import service.desk.system.Customer;
 import services.PersonService;
 import util.PasswordUtil;
-import java.util.Scanner;
-import java.util.regex.Pattern;
-import util.DatabaseUtil;
-import util.EmailUtil;
-import java.sql.SQLException;
-import java.util.List;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 /**
  *
@@ -30,32 +28,48 @@ import java.util.List;
 public class CustomerLoginHandler {
     private final PersonService<Customer> customerService;
     private final SetLastMessageCallback setLastMessageCallback;
+    private final ServiceDeskSystem serviceDeskSystem;
 
-    public CustomerLoginHandler(PersonService<Customer> customerService, SetLastMessageCallback setLastMessageCallback) {
+    public CustomerLoginHandler(PersonService<Customer> customerService, SetLastMessageCallback setLastMessageCallback, ServiceDeskSystem serviceDeskSystem) {
         this.customerService = customerService;
         this.setLastMessageCallback = setLastMessageCallback;
+        this.serviceDeskSystem = serviceDeskSystem;
     }
 
-    public void handleLogin(Scanner scanner) {
-        System.out.print("Enter your email: ");
-        String email = scanner.nextLine();
+    public void handleLogin(JFrame frame) {
+        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
 
-        System.out.print("Enter your password: ");
-        String password = scanner.nextLine();
+        JLabel emailLabel = new JLabel("Enter your email:");
+        JTextField emailField = new JTextField();
+        JLabel passwordLabel = new JLabel("Enter your password:");
+        JPasswordField passwordField = new JPasswordField();
 
-        // Fetch the customer using the email
-        Customer customer = customerService.findPersonByEmail(email);
-        if (customer != null) {
-            // Compare the plain password directly
-            if (password.equals(customer.getPassword())) { 
-                setLastMessageCallback.set("Login successful! Welcome, " + customer.getName());
-                // Proceed with further options after successful login
+        panel.add(emailLabel);
+        panel.add(emailField);
+        panel.add(passwordLabel);
+        panel.add(passwordField);
+
+        int option = JOptionPane.showConfirmDialog(frame, panel, "Customer Login", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option == JOptionPane.OK_OPTION) {
+            String email = emailField.getText();
+            char[] passwordChars = passwordField.getPassword();
+            String password = new String(passwordChars);
+
+            Customer customer = customerService.findPersonByEmail(email);
+            if (customer != null && password.equals(customer.getPassword())) {
+                // Set user info in UserSession
+                UserSession.getInstance().setUserInfo("Customer", customer.getEmail(), customer.getFirstName() + " " + customer.getLastName(), null, customer.getId());
+                setLastMessageCallback.set("Login successful! Welcome, " + customer.getFirstName() + " " + customer.getLastName());
+                // Switch to customer menu
+                serviceDeskSystem.showCustomerMenu(customer);
             } else {
-                setLastMessageCallback.set("Invalid email or password. Please try again.");
+                JOptionPane.showMessageDialog(frame, "Invalid email or password. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
             }
-        } else {
-            setLastMessageCallback.set("Invalid email or password. Please try again.");
         }
+    }
+
+    void setVisible(boolean b) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 
     @FunctionalInterface
