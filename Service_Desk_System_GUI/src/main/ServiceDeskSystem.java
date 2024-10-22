@@ -7,12 +7,12 @@ package main;
 
 import service.desk.system.Customer;
 import service.desk.system.SupportStaffMember;
-import service.desk.system.Ticket;
 import services.PersonService;
 import util.DatabaseUtil;
-import java.sql.SQLException;
+import javax.swing.*;
+import java.awt.*;
 import java.util.List;
-import java.util.Scanner;
+import service.desk.system.Ticket;
 import services.TicketService;
 /**
  *
@@ -26,196 +26,237 @@ import services.TicketService;
  * and user input handling.
  */
 public class ServiceDeskSystem {
-    private Scanner scanner;
+    private JFrame frame;
     private PersonService<Customer> customerService;
     private PersonService<SupportStaffMember> supportStaffService;
-    private int nextCustomerId;
+    private TicketService ticketService;
     private CustomerRegistrationHandler customerRegistrationHandler;
+    private CustomerLoginHandler customerLoginHandler;
     private TicketManagementHandler ticketManagementHandler;
+    private AgentRegistrationHandler agentRegistrationHandler;
+    private AgentLoginHandler agentLoginHandler;
 
     public ServiceDeskSystem() {
-        this.scanner = new Scanner(System.in);
-        this.customerService = new PersonService<>(Customer.class);
-        this.supportStaffService = new PersonService<>(SupportStaffMember.class);
-        this.customerRegistrationHandler = new CustomerRegistrationHandler(customerService, this::setLastMessage);
-        this.ticketManagementHandler = new TicketManagementHandler(
-                new TicketService(), supportStaffService, customerService, this::generateId, this::getRandomAgent);
-    }
+        frame = new JFrame("Service Desk System");
+        frame.setSize(600, 400);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
 
-    public static void main(String[] args) {
-        ServiceDeskSystem system = new ServiceDeskSystem();
-        try {
-            DatabaseUtil.initializeDatabase();
-        } catch (SQLException e) {
-            System.err.println("Error initializing database: " + e.getMessage());
-            return;
-        }
-        system.run();
-    }
+        // Initialize the PersonServices
+        customerService = new PersonService<>(Customer.class);
+        supportStaffService = new PersonService<>(SupportStaffMember.class);
+        ticketService = new TicketService(); // Initialize ticketService here
 
-    public void run() {
-        boolean running = true;
+        // Initialize handlers
+        ticketManagementHandler = new TicketManagementHandler(ticketService, supportStaffService, customerService);
+        customerRegistrationHandler = new CustomerRegistrationHandler(customerService, this::setLastMessage);
+        customerLoginHandler = new CustomerLoginHandler(customerService, this::setLastMessage, this);
+        agentRegistrationHandler = new AgentRegistrationHandler(supportStaffService, this::setLastMessage);
+        agentLoginHandler = new AgentLoginHandler(supportStaffService, this::setLastMessage, this);
 
-        while (running) {
-            System.out.println("\nWelcome to the Service Desk System!");
-            System.out.println("1. Customer Login");
-            System.out.println("2. Agent Login");
-            System.out.println("3. Register as Customer");
-            System.out.println("4. Register as Agent");
-            System.out.println("5. Exit");
+        // Create the main menu panel with a better layout and styling
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(54, 57, 63)); // Set granite background
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10); // Add padding around components
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 0;
 
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
+        // Title Label
+        JLabel titleLabel = new JLabel("Service Desk System", JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setForeground(Color.LIGHT_GRAY); // Light grey text
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0)); // Add space around title
+        gbc.gridy = 0;
+        panel.add(titleLabel, gbc);
 
-            switch (choice) {
-                case 1:
-                    customerLogin();
-                    break;
-                case 2:
-                    agentLogin();
-                    break;
-                case 3:
-                    registerCustomer();
-                    break;
-                case 4:
-                    registerAgent();
-                    break;
-                case 5:
-                    running = false;
-                    break;
-                default:
-                    System.out.println("Invalid choice, please try again.");
-            }
-        }
+        // Buttons
+        JButton customerLoginButton = createStyledButton("Customer Login");
+        customerLoginButton.addActionListener(e -> customerLoginHandler.handleLogin(frame));
 
-        DatabaseUtil.closeConnection();
-    }
+        JButton agentLoginButton = createStyledButton("Agent Login");
+        agentLoginButton.addActionListener(e -> agentLoginHandler.handleLogin(frame));
 
-    private void customerLogin() {
-        System.out.println("\nEnter your email:");
-        String email = scanner.nextLine();
-        System.out.println("Enter your password:");
-        String password = scanner.nextLine();
+        JButton registerCustomerButton = createStyledButton("Register as Customer");
+        registerCustomerButton.addActionListener(e -> customerRegistrationHandler.handleRegistration(frame));
 
-        try {
-            List<Customer> customers = DatabaseUtil.getAllCustomers();
-            for (Customer customer : customers) {
-                if (customer.getEmail().equals(email) && customer.getPassword().equals(password)) {
-                    System.out.println("Login successful! Welcome, " + customer.getName());
-                    customerMenu(customer);
-                    return;
-                }
-            }
-            System.out.println("Invalid email or password. Please try again.");
-        } catch (SQLException e) {
-            System.err.println("Error logging in: " + e.getMessage());
-        }
-    }
+        JButton registerAgentButton = createStyledButton("Register as Agent");
+        registerAgentButton.addActionListener(e -> agentRegistrationHandler.handleRegistration(frame));
 
-    private void agentLogin() {
-        System.out.println("\nEnter your username:");
-        String username = scanner.nextLine();
-        System.out.println("Enter your password:");
-        String password = scanner.nextLine();
+        JButton exitButton = createStyledButton("Exit");
+        exitButton.addActionListener(e -> {
+            DatabaseUtil.closeConnection();
+            System.exit(0);
+        });
 
-        try {
-            List<SupportStaffMember> staffList = DatabaseUtil.getAllSupportStaff();
-            for (SupportStaffMember staff : staffList) {
-                if (staff.getUsername().equals(username) && staff.getPassword().equals(password)) {
-                    System.out.println("Login successful! Welcome, " + staff.getUsername());
-                    agentMenu(staff);
-                    return;
-                }
-            }
-            System.out.println("Invalid username or password. Please try again.");
-        } catch (SQLException e) {
-            System.err.println("Error logging in: " + e.getMessage());
-        }
-    }
+        // Adding buttons to the panel
+        gbc.gridy = 1;
+        panel.add(customerLoginButton, gbc);
+        gbc.gridy = 2;
+        panel.add(agentLoginButton, gbc);
+        gbc.gridy = 3;
+        panel.add(registerCustomerButton, gbc);
+        gbc.gridy = 4;
+        panel.add(registerAgentButton, gbc);
+        gbc.gridy = 5;
+        panel.add(exitButton, gbc);
 
-    private void registerCustomer() {
-        customerRegistrationHandler.handleRegistration(scanner);
-    }
-
-    private void registerAgent() {
-        System.out.println("\nEnter your username:");
-        String username = scanner.nextLine();
-        System.out.println("Enter your email:");
-        String email = scanner.nextLine();
-        System.out.println("Enter your password:");
-        String password = scanner.nextLine();
-
-        SupportStaffMember staff = new SupportStaffMember(generateId(), username, email, password);
-
-        try {
-            DatabaseUtil.insertSupportStaff(staff);
-            System.out.println("Agent registered successfully!");
-        } catch (SQLException e) {
-            System.err.println("Error registering agent: " + e.getMessage());
-        }
-    }
-
-    private void customerMenu(Customer customer) {
-        boolean loggedIn = true;
-
-        while (loggedIn) {
-            System.out.println("\n1. Create Ticket");
-            System.out.println("2. View Tickets");
-            System.out.println("3. Logout");
-
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
-
-            switch (choice) {
-                case 1:
-                    ticketManagementHandler.createTicket(scanner, customer);
-                    break;
-                case 2:
-                    ticketManagementHandler.viewCustomerTickets(customer);
-                    break;
-                case 3:
-                    loggedIn = false;
-                    break;
-                default:
-                    System.out.println("Invalid choice, please try again.");
-            }
-        }
-    }
-
-    private void agentMenu(SupportStaffMember staff) {
-        boolean loggedIn = true;
-
-        while (loggedIn) {
-            System.out.println("\n1. View Open Tickets");
-            System.out.println("2. Logout");
-
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
-
-            switch (choice) {
-                case 1:
-                    //ticketManagementHandler.viewAgentTickets(staff);
-                    break;
-                case 2:
-                    loggedIn = false;
-                    break;
-                default:
-                    System.out.println("Invalid choice, please try again.");
-            }
-        }
+        // Adding the panel to the frame
+        frame.add(panel, BorderLayout.CENTER);
+        frame.setVisible(true);
     }
 
     private void setLastMessage(String message) {
-        System.out.println(message);
+        JOptionPane.showMessageDialog(frame, message);
     }
 
-    private int generateId() {
-        return nextCustomerId++;
+    // Method to create a styled JButton with light grey borders
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Arial", Font.PLAIN, 16));
+        button.setBackground(new Color(70, 130, 180)); // Steel blue for buttons
+        button.setForeground(Color.LIGHT_GRAY); // Light grey text
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY), // Light grey border
+                BorderFactory.createEmptyBorder(10, 25, 10, 25)
+        ));
+        return button;
     }
 
-    private SupportStaffMember getRandomAgent() {
-        // Implement logic to get a random available agent
-        // For simplicity, returning null here
-        return null;
+    public void showCustomerMenu(Customer customer) {
+        frame.getContentPane().removeAll();
+        frame.repaint();
+
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+        buttonPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        JButton createTicketButton = createStyledButton("Create Ticket");
+        createTicketButton.addActionListener(e -> ticketManagementHandler.handleTicketCreation(frame));
+
+        JButton viewTicketsButton = createStyledButton("View Tickets");
+        viewTicketsButton.addActionListener(e -> ticketManagementHandler.handleViewMyTickets(frame));
+
+        JButton logoutButton = createStyledButton("Logout");
+        logoutButton.addActionListener(e -> {
+            frame.getContentPane().removeAll();
+            frame.repaint();
+            showMainMenu();
+        });
+
+        buttonPanel.add(createTicketButton);
+        buttonPanel.add(viewTicketsButton);
+        buttonPanel.add(logoutButton);
+
+        JPanel userInfoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        userInfoPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        displayUserInfo(userInfoPanel);
+
+        panel.add(userInfoPanel, BorderLayout.NORTH);
+        panel.add(buttonPanel, BorderLayout.CENTER);
+
+        frame.add(panel);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    public void showAgentMenu(SupportStaffMember agent) {
+        frame.getContentPane().removeAll();
+        frame.repaint();
+
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+        buttonPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        JButton viewTicketsButton = createStyledButton("View Assigned Tickets");
+        viewTicketsButton.addActionListener(e -> ticketManagementHandler.handleViewAssignedTickets(frame));
+
+        JButton logoutButton = createStyledButton("Logout");
+        logoutButton.addActionListener(e -> {
+            frame.getContentPane().removeAll();
+            frame.repaint();
+            showMainMenu();
+        });
+
+        buttonPanel.add(viewTicketsButton);
+        buttonPanel.add(logoutButton);
+
+        JPanel userInfoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        userInfoPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        displayUserInfo(userInfoPanel);
+
+        panel.add(userInfoPanel, BorderLayout.NORTH);
+        panel.add(buttonPanel, BorderLayout.CENTER);
+
+        frame.add(panel);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    public void displayUserInfo(JPanel panel) {
+        UserSession session = UserSession.getInstance();
+        String userInfo = String.format("Role: %s | Email: %s | Name: %s | Username: %s | ID: %d",
+                session.getRole(),
+                session.getEmail(),
+                session.getName() != null ? session.getName() : "N/A",
+                session.getUsername() != null ? session.getUsername() : "N/A",
+                session.getId());
+
+        JLabel userInfoLabel = new JLabel(userInfo);
+        userInfoLabel.setForeground(Color.LIGHT_GRAY); // Light grey text
+        panel.add(userInfoLabel, 0);
+    }
+
+    private void showMainMenu() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(54, 57, 63)); // Granite background
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 0;
+
+        JLabel titleLabel = new JLabel("Service Desk System", JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setForeground(Color.LIGHT_GRAY); // Light grey text
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        gbc.gridy = 0;
+        panel.add(titleLabel, gbc);
+
+        JButton customerLoginButton = createStyledButton("Customer Login");
+        customerLoginButton.addActionListener(e -> customerLoginHandler.handleLogin(frame));
+
+        JButton agentLoginButton = createStyledButton("Agent Login");
+        agentLoginButton.addActionListener(e -> agentLoginHandler.handleLogin(frame));
+
+        JButton registerCustomerButton = createStyledButton("Register as Customer");
+        registerCustomerButton.addActionListener(e -> customerRegistrationHandler.handleRegistration(frame));
+
+        JButton registerAgentButton = createStyledButton("Register as Agent");
+        registerAgentButton.addActionListener(e -> agentRegistrationHandler.handleRegistration(frame));
+
+        JButton exitButton = createStyledButton("Exit");
+        exitButton.addActionListener(e -> {
+            DatabaseUtil.closeConnection();
+            System.exit(0);
+        });
+
+        gbc.gridy = 1;
+        panel.add(customerLoginButton, gbc);
+        gbc.gridy = 2;
+        panel.add(agentLoginButton, gbc);
+        gbc.gridy = 3;
+        panel.add(registerCustomerButton, gbc);
+        gbc.gridy = 4;
+        panel.add(registerAgentButton, gbc);
+        gbc.gridy = 5;
+        panel.add(exitButton, gbc);
+
+        frame.add(panel, BorderLayout.CENTER);
+        frame.revalidate();
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(ServiceDeskSystem::new);
     }
 }
