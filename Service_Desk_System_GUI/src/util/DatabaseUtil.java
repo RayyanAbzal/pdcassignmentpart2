@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import service.desk.system.Customer;
+import service.desk.system.Message;
 import service.desk.system.SupportStaffMember;
 import service.desk.system.Ticket;
 import services.PersonService;
@@ -54,7 +55,7 @@ public class DatabaseUtil {
     // Get the database connection
     public static Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
-            establishConnection();
+            connection = DriverManager.getConnection(DB_URL, USER_NAME, PASSWORD);
         }
         return connection;
     }
@@ -81,7 +82,8 @@ public class DatabaseUtil {
             if (!tableExists("Customers")) {
                 String createCustomersTable = "CREATE TABLE Customers (" +
                         "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
-                        "name VARCHAR(100)," +
+                        "firstName VARCHAR(100)," + // Changed from name to firstName
+                        "lastName VARCHAR(100)," +  // Added lastName
                         "email VARCHAR(100) UNIQUE," +
                         "password VARCHAR(100))";
                 stmt.executeUpdate(createCustomersTable);
@@ -92,6 +94,8 @@ public class DatabaseUtil {
             if (!tableExists("SupportStaff")) {
                 String createSupportStaffTable = "CREATE TABLE SupportStaff (" +
                         "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
+                        "firstName VARCHAR(100)," + // Added firstName
+                        "lastName VARCHAR(100)," +  // Added lastName
                         "username VARCHAR(50)," +
                         "email VARCHAR(100) UNIQUE," +
                         "password VARCHAR(100))";
@@ -153,11 +157,12 @@ public class DatabaseUtil {
 
     // Insert a new customer into the database
     public static int insertCustomer(Customer customer) throws SQLException {
-        String insertCustomerSQL = "INSERT INTO Customers (name, email, password) VALUES (?, ?, ?)";
+        String insertCustomerSQL = "INSERT INTO Customers (firstName, lastName, email, password) VALUES (?, ?, ?, ?)";
         try (PreparedStatement pstmt = getConnection().prepareStatement(insertCustomerSQL, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, customer.getName());
-            pstmt.setString(2, customer.getEmail());
-            pstmt.setString(3, customer.getPassword());  // No hashing, plain password saved
+            pstmt.setString(1, customer.getFirstName()); // Get first name from Customer
+            pstmt.setString(2, customer.getLastName()); // Get last name from Customer
+            pstmt.setString(3, customer.getEmail());
+            pstmt.setString(4, customer.getPassword());  // No hashing, plain password saved
             pstmt.executeUpdate();
 
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -171,12 +176,14 @@ public class DatabaseUtil {
     }
 
     // Insert a new support staff member into the database
-   public static void insertSupportStaff(SupportStaffMember staff) throws SQLException {
-        String insertSupportStaffSQL = "INSERT INTO SupportStaff (username, email, password) VALUES (?, ?, ?)";
+    public static void insertSupportStaff(SupportStaffMember staff) throws SQLException {
+        String insertSupportStaffSQL = "INSERT INTO SupportStaff (firstName, lastName, username, email, password) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = getConnection().prepareStatement(insertSupportStaffSQL, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, staff.getUsername());
-            pstmt.setString(2, staff.getEmail());
-            pstmt.setString(3, staff.getPassword());  // Save plain password directly
+            pstmt.setString(1, staff.getFirstName()); // Get first name from SupportStaffMember
+            pstmt.setString(2, staff.getLastName()); // Get last name from SupportStaffMember
+            pstmt.setString(3, staff.getUsername());
+            pstmt.setString(4, staff.getEmail());
+            pstmt.setString(5, staff.getPassword());  // Save plain password directly
             pstmt.executeUpdate();
 
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -233,10 +240,11 @@ public class DatabaseUtil {
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 int id = rs.getInt("id");
-                String name = rs.getString("name");
+                String firstName = rs.getString("firstName"); // Retrieve first name
+                String lastName = rs.getString("lastName");   // Retrieve last name
                 String email = rs.getString("email");
                 String password = rs.getString("password");
-                customers.add(new Customer(id, name, email, password));
+                customers.add(new Customer(id, firstName, lastName, email, password)); // Create Customer with first and last name
             }
         }
         return customers;
@@ -250,10 +258,12 @@ public class DatabaseUtil {
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 int id = rs.getInt("id");
+                String firstName = rs.getString("firstName"); // Retrieve first name
+                String lastName = rs.getString("lastName");   // Retrieve last name
                 String username = rs.getString("username");
                 String email = rs.getString("email");
                 String password = rs.getString("password");
-                staffMembers.add(new SupportStaffMember(id, username, email, password));
+                staffMembers.add(new SupportStaffMember(id, firstName, lastName, username, email, password)); // Create SupportStaffMember with first and last name
             }
         }
         return staffMembers;
@@ -301,4 +311,101 @@ public class DatabaseUtil {
         }
         return 0; // Return 0 if no tickets exist
     }
+    
+    public static void insertMessage(Message message) throws SQLException {
+    // Validate input
+    if (message.getSenderType() == null || message.getSenderType().isEmpty()) {
+        throw new SQLException("Sender type cannot be null or empty.");
+    }
+    if (message.getSenderName() == null || message.getSenderName().isEmpty()) {
+        throw new SQLException("Sender name cannot be null or empty.");
+    }
+    if (message.getContent() == null || message.getContent().isEmpty()) {
+        throw new SQLException("Message content cannot be null or empty.");
+    }
+
+    String insertMessageSQL = "INSERT INTO Messages (ticket_id, sender_type, sender_name, content, timestamp) VALUES (?, ?, ?, ?, ?)";
+
+    // Using try-with-resources for connection and prepared statement
+    try (Connection conn = getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(insertMessageSQL, Statement.RETURN_GENERATED_KEYS)) {
+        
+        pstmt.setInt(1, message.getTicketId());
+        pstmt.setString(2, message.getSenderType());
+        pstmt.setString(3, message.getSenderName());
+        pstmt.setString(4, message.getContent());
+        pstmt.setTimestamp(5, Timestamp.valueOf(message.getTimestamp()));
+
+        int affectedRows = pstmt.executeUpdate();
+        if (affectedRows == 0) {
+            throw new SQLException("Inserting message failed, no rows affected.");
+        }
+
+        // Retrieve the generated message ID
+        try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+            if (generatedKeys.next()) {
+                int messageId = generatedKeys.getInt(1);
+                message.setId(messageId);
+                System.out.println("Message inserted successfully.");
+            } else {
+                throw new SQLException("Inserting message failed, no ID obtained.");
+            }
+        }
+    } catch (SQLException e) {
+        System.err.println("Error executing insertMessage: " + e.getMessage());
+        throw new SQLException("Failed to insert message into the database.", e);
+    }
+}
+    
+    public static boolean ticketExists(int ticketId) throws SQLException {
+        String query = "SELECT COUNT(*) FROM Tickets WHERE id = ?";
+        try (PreparedStatement pstmt = getConnection().prepareStatement(query)) {
+            pstmt.setInt(1, ticketId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0; // Returns true if the ticket exists
+            }
+        }
+        return false; // Return false if the ticket does not exist
+    }
+
+
+// Retrieve all messages for a specific ticket
+public static List<Message> getMessagesForTicket(int ticketId) throws SQLException {
+    List<Message> messages = new ArrayList<>();
+    String query = "SELECT * FROM Messages WHERE ticket_id = ? ORDER BY timestamp ASC"; // Order messages by timestamp
+
+    // Using try-with-resources for connection and prepared statement
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(query)) {
+        stmt.setInt(1, ticketId);  // Set the ticket_id in the prepared statement
+
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                // Get the correct column values
+                int id = rs.getInt("id");  // The primary key ID of the message
+                String senderType = rs.getString("sender_type");
+                String senderName = rs.getString("sender_name");
+                String content = rs.getString("content");
+                LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();  // Convert Timestamp to LocalDateTime
+
+                // Create a Message object and add to the list
+                Message message = new Message(id, ticketId, senderType, senderName, content, timestamp);
+                messages.add(message);
+            }
+        }
+    } catch (SQLException e) {
+        System.err.println("Error executing getMessagesForTicket: " + e.getMessage());
+        throw new SQLException("Error retrieving messages for ticket ID: " + ticketId, e);
+    }
+
+    return messages;
+}
+public static void clearTable(String tableName) {
+    try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+        stmt.executeUpdate("DELETE FROM " + tableName);
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
 }
