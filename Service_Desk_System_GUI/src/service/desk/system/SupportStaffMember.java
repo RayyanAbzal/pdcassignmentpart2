@@ -19,10 +19,11 @@ public class SupportStaffMember extends Person implements Authenticated {
     private String username; // Username for the support staff
     private String password; // Holds the hashed password
 
-    public SupportStaffMember(int id, String username, String email, String password) {
-        super(id, null, email); // Set name to null
+    // Updated constructor to include first name and last name
+    public SupportStaffMember(int id, String firstName, String lastName, String username, String email, String password) {
+        super(id, firstName, lastName, email); // Call to Person constructor with first name and last name
         this.username = username;
-        this.password = password;
+        this.password = password; // Consider hashing the password before storing
     }
 
     @Override
@@ -42,7 +43,7 @@ public class SupportStaffMember extends Person implements Authenticated {
 
     @Override
     public void setPassword(String password) {
-        this.password = password;
+        this.password = password; // Consider hashing the password before storing
     }
 
     @Override
