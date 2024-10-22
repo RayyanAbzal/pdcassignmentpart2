@@ -150,8 +150,8 @@ public class Ticket {
                "Priority: " + (priority == 1 ? "Low" : priority == 2 ? "Medium" : "High") + "\n" +
                "Status: " + status + "\n" +
                "Created At: " + getCreatedAt() + "\n" +
-               "Assigned Agent: " + (assignedAgent != null ? assignedAgent.getName() : "None") + "\n" +
-               "Customer: " + customer.getName() + "\n" +
+               "Assigned Agent: " + (assignedAgent != null ? assignedAgent.getFirstName() + " " + assignedAgent.getLastName() : "None") + "\n" +
+               "Customer: " + customer.getFirstName() + " " + customer.getLastName() + "\n" +
                "Messages: \n" + getMessagesString();
     }
 
