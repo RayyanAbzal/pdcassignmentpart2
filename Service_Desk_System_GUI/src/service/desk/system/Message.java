@@ -17,15 +17,16 @@ import java.time.LocalDateTime;
  * A message includes details about the sender, content, and when it was sent.
  */
 public class Message {
-    private String senderType; // Indicates if the sender is "Customer" or "Agent"
-    private String senderName; // Name of the sender
-    private String content;    // Content of the message
-    private LocalDateTime timestamp; // Time when the message was sent
+    private int id;
+    private int ticketId;
+    private String senderType;
+    private String senderName;
+    private String content;
+    private LocalDateTime timestamp;
 
-    /*
-     * Constructs a new Message with the given details.
-     */
-    public Message(String senderType, String senderName, String content, LocalDateTime timestamp) {
+    public Message(int id, int ticketId, String senderType, String senderName, String content, LocalDateTime timestamp) {
+        this.id = id;
+        this.ticketId = ticketId;
         this.senderType = senderType;
         this.senderName = senderName;
         this.content = content;
@@ -34,39 +35,51 @@ public class Message {
 
     // Getters and Setters
 
-    /*
-     * Retrieves the type of the sender.
-     */
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getTicketId() {
+        return ticketId;
+    }
+
+    public void setTicketId(int ticketId) {
+        this.ticketId = ticketId;
+    }
+
     public String getSenderType() {
         return senderType;
     }
 
-    /*
-     * Retrieves the name of the sender.
-     */
+    public void setSenderType(String senderType) {
+        this.senderType = senderType;
+    }
+
     public String getSenderName() {
         return senderName;
     }
 
-    /*
-     * Retrieves the content of the message.
-     */
+    public void setSenderName(String senderName) {
+        this.senderName = senderName;
+    }
+
     public String getContent() {
         return content;
     }
 
-    /*
-     * Retrieves the timestamp of when the message was sent.
-     */
+    public void setContent(String content) {
+        this.content = content;
+    }
+
     public LocalDateTime getTimestamp() {
         return timestamp;
     }
 
-    /*
-     * Returns a string representation of the message, including the timestamp, sender type, sender name, and content.
-     */
-    @Override
-    public String toString() {
-        return "[" + timestamp + "] " + senderType + " (" + senderName + "): " + content;
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
     }
 }
