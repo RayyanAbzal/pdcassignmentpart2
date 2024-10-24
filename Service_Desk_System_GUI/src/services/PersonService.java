@@ -72,19 +72,29 @@ public class PersonService<T> {
     }
 
     public List<SupportStaffMember> getAllSupportStaff() {
-        List<SupportStaffMember> supportStaff = new ArrayList<>();
-        String querySQL = "SELECT id, firstName, lastName, username, email, password FROM supportstaff"; // Modify based on your table structure
-        
-        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(querySQL)) {
-            while (rs.next()) {
-                // Assuming createPersonFromResultSet can handle this type
-                supportStaff.add((SupportStaffMember) createPersonFromResultSet(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+    List<SupportStaffMember> staffList = new ArrayList<>();
+    String querySQL = "SELECT * FROM SupportStaff";
+
+    try (Connection conn = DatabaseUtil.getConnection(); // Ensure a fresh connection is used
+         Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(querySQL)) {
+         
+        while (rs.next()) {
+            int id = rs.getInt("id");
+            String firstName = rs.getString("firstName");
+            String lastName = rs.getString("lastName");
+            String username = rs.getString("username");
+            String email = rs.getString("email");
+            String password = rs.getString("password");
+
+            staffList.add(new SupportStaffMember(id, firstName, lastName, username, email, password));
         }
-        return supportStaff;
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+
+    return staffList;
+}
 
     public T getPersonById(int id) {
         String querySQL = getSelectSQL() + " WHERE id = ?";
@@ -102,8 +112,9 @@ public class PersonService<T> {
     }
 
     public T findPersonByEmail(String email) {
-        String querySQL = getSelectSQL() + " WHERE email = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
+    String querySQL = getSelectSQL() + " WHERE email = ?";
+        try (Connection conn = DatabaseUtil.getConnection(); // Ensure a fresh connection is used
+             PreparedStatement stmt = conn.prepareStatement(querySQL)) {
             stmt.setString(1, email);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -113,27 +124,28 @@ public class PersonService<T> {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return null;
+        return null; // Return null if no person is found
     }
 
     public T findPersonByUsername(String username) {
-        if (!type.equals(SupportStaffMember.class)) {
-            return null; // Only valid for SupportStaffMember
-        }
-
-        String querySQL = "SELECT id, firstName, lastName, username, email, password FROM supportstaff WHERE username = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(querySQL)) {
-            stmt.setString(1, username);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return createPersonFromResultSet(rs);
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
+    if (!type.equals(SupportStaffMember.class)) {
+        return null; // Only valid for SupportStaffMember
     }
+
+    String querySQL = "SELECT id, firstName, lastName, username, email, password FROM supportstaff WHERE username = ?";
+    try (Connection conn = DatabaseUtil.getConnection(); // Ensure fresh connection
+         PreparedStatement stmt = conn.prepareStatement(querySQL)) {
+        stmt.setString(1, username);
+        try (ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return createPersonFromResultSet(rs);
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return null;
+}
 
     public boolean emailExists(String email) {
         return exists("email", email);

@@ -40,31 +40,26 @@ public class DatabaseUtil {
     }
 
     // Establish a connection to the database
-    private static void establishConnection() {
-        if (connection == null) {
-            try {
-                connection = DriverManager.getConnection(DB_URL, USER_NAME, PASSWORD);
-                connection.setAutoCommit(true); // Enable auto-commit
-                System.out.println("Database connection established successfully with auto-commit enabled.");
-            } catch (SQLException ex) {
-                System.out.println("Connection failed: " + ex.getMessage());
-            }
-        }
+    private static void establishConnection() throws SQLException {
+    if (connection == null || connection.isClosed()) {
+        connection = DriverManager.getConnection(DB_URL, USER_NAME, PASSWORD);
+        connection.setAutoCommit(true);
+        System.out.println("Database connection established successfully with auto-commit enabled.");
+    }
+}
+
+    public static Connection getConnection() throws SQLException {
+        establishConnection(); // Ensure the connection is re-established if closed
+    return connection;
     }
 
-    // Get the database connection
-    public static Connection getConnection() throws SQLException {
-        if (connection == null || connection.isClosed()) {
-            connection = DriverManager.getConnection(DB_URL, USER_NAME, PASSWORD);
-        }
-        return connection;
-    }
 
     // Close the database connection
     public static void closeConnection() {
         if (connection != null) {
             try {
                 connection.close();
+                connection = null; // Reset connection to null after closing
                 System.out.println("Connection closed.");
             } catch (SQLException ex) {
                 System.out.println("Failed to close connection: " + ex.getMessage());
@@ -271,35 +266,34 @@ public class DatabaseUtil {
 
     // Retrieve all tickets from the database
     public static List<Ticket> getAllTickets() throws SQLException {
-        List<Ticket> tickets = new ArrayList<>();
-        String query = "SELECT * FROM Tickets";
+    List<Ticket> tickets = new ArrayList<>();
+    String query = "SELECT * FROM Tickets WHERE status = 'OPEN'"; // Only fetch OPEN tickets
 
-        try (Statement stmt = DatabaseUtil.getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-            while (rs.next()) {
-                int id = rs.getInt("id");
-                int customerId = rs.getInt("customerId");
-                int agentId = rs.getInt("agentId");
-                String topic = rs.getString("topic");
-                String content = rs.getString("content");
-                LocalDateTime createdAt = rs.getTimestamp("createdAt").toLocalDateTime();
-                int priority = rs.getInt("priority");
-                String status = rs.getString("status");
+    try (Statement stmt = DatabaseUtil.getConnection().createStatement();
+         ResultSet rs = stmt.executeQuery(query)) {
+        while (rs.next()) {
+            int id = rs.getInt("id");
+            int customerId = rs.getInt("customerId");
+            int agentId = rs.getInt("agentId");
+            String topic = rs.getString("topic");
+            String content = rs.getString("content");
+            LocalDateTime createdAt = rs.getTimestamp("createdAt").toLocalDateTime();
+            int priority = rs.getInt("priority");
 
-                // Use PersonService to find Customer and SupportStaffMember
-                PersonService<Customer> customerService = new PersonService<>(Customer.class);
-                PersonService<SupportStaffMember> agentService = new PersonService<>(SupportStaffMember.class);
+            // Use PersonService to find Customer and SupportStaffMember
+            PersonService<Customer> customerService = new PersonService<>(Customer.class);
+            PersonService<SupportStaffMember> agentService = new PersonService<>(SupportStaffMember.class);
 
-                Customer customer = customerService.getPersonById(customerId); // Get Customer by ID
-                SupportStaffMember assignedAgent = agentService.getPersonById(agentId); // Get Agent by ID
+            Customer customer = customerService.getPersonById(customerId); // Get Customer by ID
+            SupportStaffMember assignedAgent = agentService.getPersonById(agentId); // Get Agent by ID
 
-                // Create and add the Ticket object to the list
-                Ticket ticket = new Ticket(id, customer, assignedAgent, topic, content, createdAt, priority);
-                tickets.add(ticket);
-            }
+            // Create and add the Ticket object to the list
+            Ticket ticket = new Ticket(id, customer, assignedAgent, topic, content, createdAt, priority);
+            tickets.add(ticket);
         }
-        return tickets;
     }
+    return tickets;
+}
     
     public static int getMaxTicketId() throws SQLException {
         String query = "SELECT MAX(id) FROM Tickets";
@@ -372,35 +366,27 @@ public class DatabaseUtil {
 
 // Retrieve all messages for a specific ticket
 public static List<Message> getMessagesForTicket(int ticketId) throws SQLException {
-    List<Message> messages = new ArrayList<>();
-    String query = "SELECT * FROM Messages WHERE ticket_id = ? ORDER BY timestamp ASC"; // Order messages by timestamp
-
-    // Using try-with-resources for connection and prepared statement
-    try (Connection conn = getConnection();
-         PreparedStatement stmt = conn.prepareStatement(query)) {
-        stmt.setInt(1, ticketId);  // Set the ticket_id in the prepared statement
-
-        try (ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                // Get the correct column values
-                int id = rs.getInt("id");  // The primary key ID of the message
-                String senderType = rs.getString("sender_type");
-                String senderName = rs.getString("sender_name");
-                String content = rs.getString("content");
-                LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();  // Convert Timestamp to LocalDateTime
-
-                // Create a Message object and add to the list
-                Message message = new Message(id, ticketId, senderType, senderName, content, timestamp);
-                messages.add(message);
+        List<Message> messages = new ArrayList<>();
+        String query = "SELECT * FROM Messages WHERE ticket_id = ? ORDER BY timestamp ASC";
+        establishConnection();  // Ensure the connection is open
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setInt(1, ticketId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    String senderType = rs.getString("sender_type");
+                    String senderName = rs.getString("sender_name");
+                    String content = rs.getString("content");
+                    LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();
+                    messages.add(new Message(id, ticketId, senderType, senderName, content, timestamp));
+                }
             }
+        } catch (SQLException e) {
+            System.err.println("Error executing getMessagesForTicket: " + e.getMessage());
+            throw new SQLException("Error retrieving messages for ticket ID: " + ticketId, e);
         }
-    } catch (SQLException e) {
-        System.err.println("Error executing getMessagesForTicket: " + e.getMessage());
-        throw new SQLException("Error retrieving messages for ticket ID: " + ticketId, e);
+        return messages;
     }
-
-    return messages;
-}
 public static void clearTable(String tableName) {
     try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
         stmt.executeUpdate("DELETE FROM " + tableName);
