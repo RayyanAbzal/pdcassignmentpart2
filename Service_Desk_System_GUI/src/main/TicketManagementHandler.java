@@ -207,106 +207,119 @@ public class TicketManagementHandler {
     private JButton createMessageButton(JFrame frame, Ticket ticket) {
     JButton button = new JButton("Leave/View Messages");
     button.addActionListener(e -> {
-    // Fetch the messages for the selected ticket
-    List<Message> messages = null;
-    try {
-        messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
-    } catch (SQLException ex) {
-        showErrorDialog(frame, "Error retrieving messages: " + ex.getMessage(), "Error");
-        return;
-    }
-
-    // Create a panel to show the messages and allow the user to input a new message
-    JPanel messagePanel = new JPanel(new BorderLayout());
-
-    // Text Area to display messages
-    JTextArea messageArea = new JTextArea(10, 30);
-    messageArea.setEditable(false);
-    StringBuilder messageDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
-
-    if (messages != null && !messages.isEmpty()) {
-        for (Message message : messages) {
-            messageDisplay.append(message.getTimestamp())
-                .append(" - [").append(message.getSenderType())
-                .append("] ").append(message.getSenderName())
-                .append(": ").append(message.getContent())
-                .append("\n");
+        List<Message> messages = null;
+        try {
+            messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
+        } catch (SQLException ex) {
+            showErrorDialog(frame, "Error retrieving messages: " + ex.getMessage(), "Error");
+            return;
         }
-    } else {
-        messageDisplay.append("No messages yet.\n");
-    }
 
-    messageArea.setText(messageDisplay.toString());
-    JScrollPane scrollPane = new JScrollPane(messageArea);
-    messagePanel.add(scrollPane, BorderLayout.CENTER);
+        // Create a modern styled panel for messages
+        JPanel messagePanel = new JPanel(new BorderLayout(10, 10)); // Add padding
+        messagePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // Add margin
 
-    // Text field for adding new messages
-    JTextField newMessageField = new JTextField();
-    messagePanel.add(new JLabel("Enter your message:"), BorderLayout.NORTH);
-    messagePanel.add(newMessageField, BorderLayout.SOUTH);
+        // Text Area for displaying messages, in a more readable format
+        JTextArea messageArea = new JTextArea(12, 40);
+        messageArea.setEditable(false);
+        messageArea.setFont(new Font("Arial", Font.PLAIN, 14)); // Modern font
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        messageArea.setBackground(new Color(240, 240, 240)); // Subtle background
+        messageArea.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
 
-    int result = JOptionPane.showConfirmDialog(frame, messagePanel, "Messages", JOptionPane.OK_CANCEL_OPTION);
-
-    if (result == JOptionPane.OK_OPTION) {
-        String newMessageContent = newMessageField.getText().trim();
-        if (!newMessageContent.isEmpty()) {
-            UserSession session = UserSession.getInstance();
-
-            // Validate ticket ID, sender type, and sender name
-            if (ticket.getId() <= 0) {
-                showErrorDialog(frame, "Invalid ticket ID.", "Error");
-                return;
+        StringBuilder messageDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
+        if (messages != null && !messages.isEmpty()) {
+            for (Message message : messages) {
+                messageDisplay.append(message.getTimestamp())
+                    .append(" - [").append(message.getSenderType())
+                    .append("] ").append(message.getSenderName())
+                    .append(": ").append(message.getContent())
+                    .append("\n\n"); // Add spacing between messages
             }
+        } else {
+            messageDisplay.append("No messages yet.\n");
+        }
 
-            String senderType = session.getRole();
-            String senderName = session.getName();
+        messageArea.setText(messageDisplay.toString());
+        JScrollPane scrollPane = new JScrollPane(messageArea);
+        scrollPane.setBorder(null); // No visible border for cleaner look
+        messagePanel.add(scrollPane, BorderLayout.CENTER);
 
-            if (senderType == null || senderType.isEmpty()) {
-                showErrorDialog(frame, "Sender type cannot be null or empty.", "Error");
-                return;
-            }
+        // TextField for new message input with better layout
+        JTextField newMessageField = new JTextField();
+        newMessageField.setFont(new Font("Arial", Font.PLAIN, 14));
+        newMessageField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+        
+        // Panel for input label and field
+        JPanel inputPanel = new JPanel(new BorderLayout(5, 5));
+        inputPanel.add(new JLabel("Enter your message:"), BorderLayout.NORTH);
+        inputPanel.add(newMessageField, BorderLayout.CENTER);
+        messagePanel.add(inputPanel, BorderLayout.SOUTH);
 
-            if (senderName == null || senderName.isEmpty()) {
-                showErrorDialog(frame, "Sender name cannot be null or empty.", "Error");
-                return;
-            }
+        // Show the panel in a dialog with consistent padding and cleaner buttons
+        UIManager.put("OptionPane.buttonFont", new Font("Arial", Font.PLAIN, 13)); // Modernize buttons
+        int result = JOptionPane.showConfirmDialog(frame, messagePanel, "Messages", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
-            // Check if the ticket exists in the database
-            try {
-                if (!DatabaseUtil.ticketExists(ticket.getId())) {
-                    showErrorDialog(frame, "Ticket does not exist.", "Error");
+        if (result == JOptionPane.OK_OPTION) {
+            String newMessageContent = newMessageField.getText().trim();
+            if (!newMessageContent.isEmpty()) {
+                UserSession session = UserSession.getInstance();
+
+                if (ticket.getId() <= 0) {
+                    showErrorDialog(frame, "Invalid ticket ID.", "Error");
                     return;
                 }
-            } catch (SQLException ex) {
-                showErrorDialog(frame, "Error checking ticket existence: " + ex.getMessage(), "Error");
-                return;
-            }
 
-            Message newMessage = new Message(0, ticket.getId(), senderType, senderName, newMessageContent, LocalDateTime.now());
+                String senderType = session.getRole();
+                String senderName = session.getName();
 
-            try {
-                // Add the message to the database using the new Message object
-                DatabaseUtil.insertMessage(newMessage);
-                // Refresh messages after sending
-                messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
-                StringBuilder updatedDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
-
-                for (Message message : messages) {
-                    updatedDisplay.append(message.getTimestamp())
-                        .append(" - [").append(message.getSenderType())
-                        .append("] ").append(message.getSenderName())
-                        .append(": ").append(message.getContent())
-                        .append("\n");
+                if (senderType == null || senderType.isEmpty()) {
+                    showErrorDialog(frame, "Sender type cannot be null or empty.", "Error");
+                    return;
                 }
 
-                messageArea.setText(updatedDisplay.toString());
-                JOptionPane.showMessageDialog(frame, "Message sent successfully.");
-            } catch (SQLException ex) {
-                showErrorDialog(frame, "Error sending message: " + ex.getMessage(), "Error");
+                if (senderName == null || senderName.isEmpty()) {
+                    showErrorDialog(frame, "Sender name cannot be null or empty.", "Error");
+                    return;
+                }
+
+                try {
+                    if (!DatabaseUtil.ticketExists(ticket.getId())) {
+                        showErrorDialog(frame, "Ticket does not exist.", "Error");
+                        return;
+                    }
+                } catch (SQLException ex) {
+                    showErrorDialog(frame, "Error checking ticket existence: " + ex.getMessage(), "Error");
+                    return;
+                }
+
+                Message newMessage = new Message(0, ticket.getId(), senderType, senderName, newMessageContent, LocalDateTime.now());
+
+                try {
+                    DatabaseUtil.insertMessage(newMessage);
+                    messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
+                    StringBuilder updatedDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
+
+                    for (Message message : messages) {
+                        updatedDisplay.append(message.getTimestamp())
+                            .append(" - [").append(message.getSenderType())
+                            .append("] ").append(message.getSenderName())
+                            .append(": ").append(message.getContent())
+                            .append("\n\n");
+                    }
+
+                    messageArea.setText(updatedDisplay.toString());
+                    JOptionPane.showMessageDialog(frame, "Message sent successfully.");
+                } catch (SQLException ex) {
+                    showErrorDialog(frame, "Error sending message: " + ex.getMessage(), "Error");
+                }
             }
         }
-    }
-});
+    });
     return button;
 }
 
