@@ -38,7 +38,7 @@ public class ServiceDeskSystem {
 
     public ServiceDeskSystem() {
         frame = new JFrame("Service Desk System");
-        frame.setSize(600, 400);
+        frame.setSize(600, 500);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
