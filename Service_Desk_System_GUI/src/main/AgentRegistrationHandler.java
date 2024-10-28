@@ -26,11 +26,14 @@ public class AgentRegistrationHandler {
     private final PersonService<SupportStaffMember> personService;
     private final SetLastMessageCallback setLastMessageCallback;
 
+    // Sets up the handler with the necessary service and callback for agent registration
     public AgentRegistrationHandler(PersonService<SupportStaffMember> personService, SetLastMessageCallback setLastMessageCallback) {
         this.personService = personService;
         this.setLastMessageCallback = setLastMessageCallback;
     }
 
+    // Displays the registration form and handles user input for agent details.
+    // Validates the input and registers the agent if all details are correct.
     public void handleRegistration(JFrame frame) {
         JPanel panel = new JPanel(new GridLayout(6, 2, 10, 10)); // Increase rows
 
@@ -70,13 +73,13 @@ public class AgentRegistrationHandler {
                 return;
             }
 
-            // Validate email using EmailUtil
+            // Validate email format
             if (!ValidationUtil.isValidEmail(email)) {
                 JOptionPane.showMessageDialog(frame, "Invalid email format. Please enter a valid email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-             // Validate password using PasswordUtil
+            // Validate password criteria
             String passwordError = ValidationUtil.validatePassword(password);
             if (passwordError != null) {
                 JOptionPane.showMessageDialog(frame, passwordError, "Registration Failed", JOptionPane.ERROR_MESSAGE);
@@ -92,6 +95,7 @@ public class AgentRegistrationHandler {
         }
     }
 
+    // Saves the agent to the system and sets a confirmation message
     private void saveAgent(SupportStaffMember agent) {
         agent.setFirstName(capitalizeFirstLetter(agent.getFirstName()));
         agent.setLastName(capitalizeFirstLetter(agent.getLastName()));
@@ -100,6 +104,7 @@ public class AgentRegistrationHandler {
         setLastMessageCallback.set("Agent registered successfully.");
     }
 
+    // Capitalizes the first letter of a given string, used for name formatting
     private String capitalizeFirstLetter(String input) {
         if (input == null || input.isEmpty()) {
             return input;
@@ -107,6 +112,7 @@ public class AgentRegistrationHandler {
         return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
     }
 
+    // Functional interface for displaying the last message to the user
     @FunctionalInterface
     public interface SetLastMessageCallback {
         void set(String message);
