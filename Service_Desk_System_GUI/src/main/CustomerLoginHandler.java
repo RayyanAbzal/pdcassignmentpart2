@@ -10,8 +10,6 @@ import services.PersonService;
 import util.PasswordUtil;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 /**
  *
@@ -37,17 +35,27 @@ public class CustomerLoginHandler {
     }
 
     public void handleLogin(JFrame frame) {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+        JPanel panel = new JPanel(new GridBagLayout());
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.insets = new Insets(10, 10, 10, 10);
 
-        JLabel emailLabel = new JLabel("Enter your email:");
-        JTextField emailField = new JTextField();
-        JLabel passwordLabel = new JLabel("Enter your password:");
-        JPasswordField passwordField = new JPasswordField();
+    // Labels and fields with proper alignment
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    panel.add(new JLabel("Enter your email:"), gbc);
 
-        panel.add(emailLabel);
-        panel.add(emailField);
-        panel.add(passwordLabel);
-        panel.add(passwordField);
+    gbc.gridx = 1;
+    JTextField emailField = new JTextField(20); // Increased size
+    panel.add(emailField, gbc);
+
+    gbc.gridx = 0;
+    gbc.gridy = 1;
+    panel.add(new JLabel("Enter your password:"), gbc);
+
+    gbc.gridx = 1;
+    JPasswordField passwordField = new JPasswordField(20);
+    panel.add(passwordField, gbc);
 
         int option = JOptionPane.showConfirmDialog(frame, panel, "Customer Login", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (option == JOptionPane.OK_OPTION) {
@@ -66,10 +74,6 @@ public class CustomerLoginHandler {
                 JOptionPane.showMessageDialog(frame, "Invalid email or password. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
             }
         }
-    }
-
-    void setVisible(boolean b) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 
     @FunctionalInterface

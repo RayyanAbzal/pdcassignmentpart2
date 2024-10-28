@@ -72,6 +72,12 @@ public class CustomerRegistrationHandler {
                 return;
             }
 
+            // Validate email using EmailUtil
+            if (!EmailUtil.isValidEmail(email)) {
+                JOptionPane.showMessageDialog(frame, "Invalid email format. Please enter a valid email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             if (personService.findPersonByEmail(email) != null) {
                 JOptionPane.showMessageDialog(frame, "An account with this email already exists. Please use a different email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
             } else {

@@ -75,6 +75,12 @@ public class AgentRegistrationHandler {
                 return;
             }
 
+            // Validate email using EmailUtil
+            if (!EmailUtil.isValidEmail(email)) {
+                JOptionPane.showMessageDialog(frame, "Invalid email format. Please enter a valid email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             if (personService.findPersonByUsername(username) != null) {
                 JOptionPane.showMessageDialog(frame, "An account with this username already exists. Please use a different username.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
             } else {
