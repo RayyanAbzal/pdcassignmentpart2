@@ -34,16 +34,17 @@ public class ServiceDeskSystem {
     private AgentRegistrationHandler agentRegistrationHandler;
     private AgentLoginHandler agentLoginHandler;
 
+    // Sets up the service desk system, initializing services and handlers
     public ServiceDeskSystem() {
         frame = new JFrame("Service Desk System");
         frame.setSize(600, 500);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
-        // Initialize the PersonServices
+        // Initialize services
         customerService = new PersonService<>(Customer.class);
         supportStaffService = new PersonService<>(SupportStaffMember.class);
-        ticketService = new TicketService(); // Initialize ticketService here
+        ticketService = new TicketService();
 
         // Initialize handlers
         ticketManagementHandler = new TicketManagementHandler(ticketService, supportStaffService, customerService);
@@ -52,23 +53,22 @@ public class ServiceDeskSystem {
         agentRegistrationHandler = new AgentRegistrationHandler(supportStaffService, this::setLastMessage);
         agentLoginHandler = new AgentLoginHandler(supportStaffService, this::setLastMessage, this);
 
-        // Create the main menu panel with a better layout and styling
+        // Set up main menu panel
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(new Color(54, 57, 63)); // Set granite background
+        panel.setBackground(new Color(54, 57, 63));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10); // Add padding around components
+        gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0;
 
-        // Title Label
         JLabel titleLabel = new JLabel("Service Desk System", JLabel.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.LIGHT_GRAY); // Light grey text
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0)); // Add space around title
+        titleLabel.setForeground(Color.LIGHT_GRAY);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         gbc.gridy = 0;
         panel.add(titleLabel, gbc);
 
-        // Buttons
+        // Set up buttons with actions
         JButton customerLoginButton = createStyledButton("Customer Login");
         customerLoginButton.addActionListener(e -> customerLoginHandler.handleLogin(frame));
 
@@ -87,7 +87,7 @@ public class ServiceDeskSystem {
             System.exit(0);
         });
 
-        // Adding buttons to the panel
+        // Add buttons to panel
         gbc.gridy = 1;
         panel.add(customerLoginButton, gbc);
         gbc.gridy = 2;
@@ -99,29 +99,30 @@ public class ServiceDeskSystem {
         gbc.gridy = 5;
         panel.add(exitButton, gbc);
 
-        // Adding the panel to the frame
         frame.add(panel, BorderLayout.CENTER);
         frame.setVisible(true);
     }
 
+    // Sets the last message to be shown as a dialog
     private void setLastMessage(String message) {
         JOptionPane.showMessageDialog(frame, message);
     }
 
-    // Method to create a styled JButton with light grey borders
+    // Creates a styled button for the interface
     private JButton createStyledButton(String text) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.PLAIN, 16));
-        button.setBackground(new Color(70, 130, 180)); // Steel blue for buttons
-        button.setForeground(Color.LIGHT_GRAY); // Light grey text
+        button.setBackground(new Color(70, 130, 180));
+        button.setForeground(Color.LIGHT_GRAY);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.LIGHT_GRAY), // Light grey border
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
                 BorderFactory.createEmptyBorder(10, 25, 10, 25)
         ));
         return button;
     }
 
+    // Shows the customer menu
     public void showCustomerMenu(Customer customer) {
         frame.getContentPane().removeAll();
         frame.repaint();
@@ -129,7 +130,7 @@ public class ServiceDeskSystem {
         JPanel panel = new JPanel(new BorderLayout());
 
         JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 10, 10));
-        buttonPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        buttonPanel.setBackground(new Color(54, 57, 63));
         JButton createTicketButton = createStyledButton("Create Ticket");
         createTicketButton.addActionListener(e -> ticketManagementHandler.handleTicketCreation(frame));
 
@@ -148,7 +149,7 @@ public class ServiceDeskSystem {
         buttonPanel.add(logoutButton);
 
         JPanel userInfoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        userInfoPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        userInfoPanel.setBackground(new Color(54, 57, 63));
         displayUserInfo(userInfoPanel);
 
         panel.add(userInfoPanel, BorderLayout.NORTH);
@@ -159,6 +160,7 @@ public class ServiceDeskSystem {
         frame.repaint();
     }
 
+    // Shows the agent menu
     public void showAgentMenu(SupportStaffMember agent) {
         frame.getContentPane().removeAll();
         frame.repaint();
@@ -166,7 +168,7 @@ public class ServiceDeskSystem {
         JPanel panel = new JPanel(new BorderLayout());
 
         JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 10, 10));
-        buttonPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        buttonPanel.setBackground(new Color(54, 57, 63));
         JButton viewTicketsButton = createStyledButton("View Assigned Tickets");
         viewTicketsButton.addActionListener(e -> ticketManagementHandler.handleViewAssignedTickets(frame));
 
@@ -181,7 +183,7 @@ public class ServiceDeskSystem {
         buttonPanel.add(logoutButton);
 
         JPanel userInfoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        userInfoPanel.setBackground(new Color(54, 57, 63)); // Granite background
+        userInfoPanel.setBackground(new Color(54, 57, 63));
         displayUserInfo(userInfoPanel);
 
         panel.add(userInfoPanel, BorderLayout.NORTH);
@@ -192,6 +194,7 @@ public class ServiceDeskSystem {
         frame.repaint();
     }
 
+    // Displays user session information
     public void displayUserInfo(JPanel panel) {
         UserSession session = UserSession.getInstance();
         String userInfo = String.format("Role: %s | Email: %s | Name: %s | Username: %s | ID: %d",
@@ -202,13 +205,14 @@ public class ServiceDeskSystem {
                 session.getId());
 
         JLabel userInfoLabel = new JLabel(userInfo);
-        userInfoLabel.setForeground(Color.LIGHT_GRAY); // Light grey text
+        userInfoLabel.setForeground(Color.LIGHT_GRAY);
         panel.add(userInfoLabel, 0);
     }
 
+    // Shows the main menu
     private void showMainMenu() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(new Color(54, 57, 63)); // Granite background
+        panel.setBackground(new Color(54, 57, 63));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -216,7 +220,7 @@ public class ServiceDeskSystem {
 
         JLabel titleLabel = new JLabel("Service Desk System", JLabel.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.LIGHT_GRAY); // Light grey text
+        titleLabel.setForeground(Color.LIGHT_GRAY);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         gbc.gridy = 0;
         panel.add(titleLabel, gbc);
@@ -254,7 +258,8 @@ public class ServiceDeskSystem {
         frame.revalidate();
     }
 
+    // Main method to start the application
     public static void main(String[] args) {
         SwingUtilities.invokeLater(ServiceDeskSystem::new);
     }
-} 
+}
