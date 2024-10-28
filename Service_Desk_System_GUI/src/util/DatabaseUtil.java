@@ -24,7 +24,7 @@ import services.PersonService;
 public class DatabaseUtil {
     // Embedded database URL for Apache Derby
     //private static final String DB_URL = "jdbc:derby:servicedesksystem_ebd;create=true";
-    private static final String DB_URL = "jdbc:derby:/Users/rayyanabzal/Documents/pdcassignmentpart2/Service_Desk_System_GUI/servicedesksystem_ebd;create=true";
+    private static final String DB_URL = "jdbc:derby:servicedesksystem_ebd;create=true";
     
 
     private static Connection connection;
