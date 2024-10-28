@@ -29,16 +29,6 @@ public class Customer extends Person {
         this.password = password; // Update the hashed password
     }
 
-    public String getUsername() {
-        // Customers don't have a username, but we return the email instead for authentication purposes
-        return getEmail();
-    }
-
-    public void setUsername(String username) {
-        // Customers don't have a username, so this method can be left empty or log a warning
-        throw new UnsupportedOperationException("Customer does not use a username. Email is used for login.");
-    }
-
     @Override
     public String toString() {
         return "Customer{" +

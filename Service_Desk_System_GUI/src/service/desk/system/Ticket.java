@@ -171,9 +171,6 @@ public class Ticket {
         return sb.toString();
     }
 
-    /**
-     * @param createdAt the createdAt to set
-     */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
