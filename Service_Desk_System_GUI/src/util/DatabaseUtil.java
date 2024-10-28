@@ -22,10 +22,11 @@ import services.PersonService;
  * Utility class to handle database connections and operations for the Service Desk System.
  */
 public class DatabaseUtil {
-    // Database connection parameters
-    private static final String USER_NAME = "pdc"; // your DB username
-    private static final String PASSWORD = "pdc"; // your DB password
-    private static final String DB_URL = "jdbc:derby://localhost:1527/servicedesksystem"; // URL of the DB host
+    // Embedded database URL for Apache Derby
+    //private static final String DB_URL = "jdbc:derby:servicedesksystem_ebd;create=true";
+    private static final String DB_URL = "jdbc:derby:/Users/rayyanabzal/Documents/pdcassignmentpart2/Service_Desk_System_GUI/servicedesksystem_ebd;create=true";
+    
+
     private static Connection connection;
 
     public static void main(String[] args) {
@@ -39,20 +40,17 @@ public class DatabaseUtil {
         }
     }
 
-    // Establish a connection to the database
+    // Establish a connection to the embedded database
     private static void establishConnection() throws SQLException {
-    if (connection == null || connection.isClosed()) {
-        connection = DriverManager.getConnection(DB_URL, USER_NAME, PASSWORD);
-        connection.setAutoCommit(true);
-        System.out.println("Database connection established successfully with auto-commit enabled.");
+        if (connection == null || connection.isClosed()) {
+            connection = DriverManager.getConnection(DB_URL);
+        }
     }
-}
 
     public static Connection getConnection() throws SQLException {
         establishConnection(); // Ensure the connection is re-established if closed
-    return connection;
+        return connection;
     }
-
 
     // Close the database connection
     public static void closeConnection() {
@@ -67,6 +65,7 @@ public class DatabaseUtil {
         }
     }
 
+
     // Create the tables for customers, agents, and tickets if they do not exist
     public static void initializeDatabase() throws SQLException {
         Statement stmt = null;
@@ -76,7 +75,7 @@ public class DatabaseUtil {
             // Check and create Customers table if it doesn't exist
             if (!tableExists("Customers")) {
                 String createCustomersTable = "CREATE TABLE Customers (" +
-                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
+                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
                         "firstName VARCHAR(100)," + // Changed from name to firstName
                         "lastName VARCHAR(100)," +  // Added lastName
                         "email VARCHAR(100) UNIQUE," +
@@ -88,7 +87,7 @@ public class DatabaseUtil {
             // Check and create SupportStaff table if it doesn't exist
             if (!tableExists("SupportStaff")) {
                 String createSupportStaffTable = "CREATE TABLE SupportStaff (" +
-                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
+                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
                         "firstName VARCHAR(100)," + // Added firstName
                         "lastName VARCHAR(100)," +  // Added lastName
                         "username VARCHAR(50)," +
@@ -101,7 +100,7 @@ public class DatabaseUtil {
             // Check and create Tickets table if it doesn't exist
             if (!tableExists("Tickets")) {
                 String createTicketsTable = "CREATE TABLE Tickets (" +
-                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
+                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
                         "customerId INT," +
                         "agentId INT," +
                         "topic VARCHAR(100)," +
@@ -114,6 +113,19 @@ public class DatabaseUtil {
                 stmt.executeUpdate(createTicketsTable);
                 System.out.println("Tickets table created successfully.");
             }
+            
+            if (!tableExists("Messages")) {
+            String createMessagesTable = "CREATE TABLE Messages (" +
+                    "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
+                    "ticket_id INT," +
+                    "sender_type VARCHAR(50)," +
+                    "sender_name VARCHAR(100)," +
+                    "content VARCHAR(255)," +
+                    "timestamp TIMESTAMP," +
+                    "FOREIGN KEY (ticket_id) REFERENCES Tickets(id))";
+            stmt.executeUpdate(createMessagesTable);
+            System.out.println("Messages table created successfully.");
+        }
 
         } catch (SQLException e) {
             throw new SQLException("Error initializing the database: " + e.getMessage(), e);
@@ -390,6 +402,7 @@ public static List<Message> getMessagesForTicket(int ticketId) throws SQLExcepti
 public static void clearTable(String tableName) {
     try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
         stmt.executeUpdate("DELETE FROM " + tableName);
+        stmt.executeUpdate("ALTER TABLE " + tableName + " ALTER COLUMN ID RESTART WITH 1");
     } catch (SQLException e) {
         e.printStackTrace();
     }
