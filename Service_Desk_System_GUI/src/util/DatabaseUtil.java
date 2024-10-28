@@ -278,34 +278,34 @@ public class DatabaseUtil {
 
     // Retrieve all tickets from the database
     public static List<Ticket> getAllTickets() throws SQLException {
-    List<Ticket> tickets = new ArrayList<>();
-    String query = "SELECT * FROM Tickets WHERE status = 'OPEN'"; // Only fetch OPEN tickets
+        List<Ticket> tickets = new ArrayList<>();
+        String query = "SELECT * FROM Tickets WHERE status = 'OPEN'"; // Only fetch OPEN tickets
 
-    try (Statement stmt = DatabaseUtil.getConnection().createStatement();
-         ResultSet rs = stmt.executeQuery(query)) {
-        while (rs.next()) {
-            int id = rs.getInt("id");
-            int customerId = rs.getInt("customerId");
-            int agentId = rs.getInt("agentId");
-            String topic = rs.getString("topic");
-            String content = rs.getString("content");
-            LocalDateTime createdAt = rs.getTimestamp("createdAt").toLocalDateTime();
-            int priority = rs.getInt("priority");
+        try (Statement stmt = DatabaseUtil.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                int customerId = rs.getInt("customerId");
+                int agentId = rs.getInt("agentId");
+                String topic = rs.getString("topic");
+                String content = rs.getString("content");
+                LocalDateTime createdAt = rs.getTimestamp("createdAt").toLocalDateTime();
+                int priority = rs.getInt("priority");
 
-            // Use PersonService to find Customer and SupportStaffMember
-            PersonService<Customer> customerService = new PersonService<>(Customer.class);
-            PersonService<SupportStaffMember> agentService = new PersonService<>(SupportStaffMember.class);
+                // Use PersonService to find Customer and SupportStaffMember
+                PersonService<Customer> customerService = new PersonService<>(Customer.class);
+                PersonService<SupportStaffMember> agentService = new PersonService<>(SupportStaffMember.class);
 
-            Customer customer = customerService.getPersonById(customerId); // Get Customer by ID
-            SupportStaffMember assignedAgent = agentService.getPersonById(agentId); // Get Agent by ID
+                Customer customer = customerService.getPersonById(customerId); // Get Customer by ID
+                SupportStaffMember assignedAgent = agentService.getPersonById(agentId); // Get Agent by ID
 
-            // Create and add the Ticket object to the list
-            Ticket ticket = new Ticket(id, customer, assignedAgent, topic, content, createdAt, priority);
-            tickets.add(ticket);
+                // Create and add the Ticket object to the list
+                Ticket ticket = new Ticket(id, customer, assignedAgent, topic, content, createdAt, priority);
+                tickets.add(ticket);
+            }
         }
+        return tickets;
     }
-    return tickets;
-}
     
     public static int getMaxTicketId() throws SQLException {
         String query = "SELECT MAX(id) FROM Tickets";
@@ -319,49 +319,49 @@ public class DatabaseUtil {
     }
     
     public static void insertMessage(Message message) throws SQLException {
-    // Validate input
-    if (message.getSenderType() == null || message.getSenderType().isEmpty()) {
-        throw new SQLException("Sender type cannot be null or empty.");
-    }
-    if (message.getSenderName() == null || message.getSenderName().isEmpty()) {
-        throw new SQLException("Sender name cannot be null or empty.");
-    }
-    if (message.getContent() == null || message.getContent().isEmpty()) {
-        throw new SQLException("Message content cannot be null or empty.");
-    }
-
-    String insertMessageSQL = "INSERT INTO Messages (ticket_id, sender_type, sender_name, content, timestamp) VALUES (?, ?, ?, ?, ?)";
-
-    // Using try-with-resources for connection and prepared statement
-    try (Connection conn = getConnection();
-         PreparedStatement pstmt = conn.prepareStatement(insertMessageSQL, Statement.RETURN_GENERATED_KEYS)) {
-        
-        pstmt.setInt(1, message.getTicketId());
-        pstmt.setString(2, message.getSenderType());
-        pstmt.setString(3, message.getSenderName());
-        pstmt.setString(4, message.getContent());
-        pstmt.setTimestamp(5, Timestamp.valueOf(message.getTimestamp()));
-
-        int affectedRows = pstmt.executeUpdate();
-        if (affectedRows == 0) {
-            throw new SQLException("Inserting message failed, no rows affected.");
+        // Validate input
+        if (message.getSenderType() == null || message.getSenderType().isEmpty()) {
+            throw new SQLException("Sender type cannot be null or empty.");
+        }
+        if (message.getSenderName() == null || message.getSenderName().isEmpty()) {
+            throw new SQLException("Sender name cannot be null or empty.");
+        }
+        if (message.getContent() == null || message.getContent().isEmpty()) {
+            throw new SQLException("Message content cannot be null or empty.");
         }
 
-        // Retrieve the generated message ID
-        try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
-            if (generatedKeys.next()) {
-                int messageId = generatedKeys.getInt(1);
-                message.setId(messageId);
-                System.out.println("Message inserted successfully.");
-            } else {
-                throw new SQLException("Inserting message failed, no ID obtained.");
+        String insertMessageSQL = "INSERT INTO Messages (ticket_id, sender_type, sender_name, content, timestamp) VALUES (?, ?, ?, ?, ?)";
+
+        // Using try-with-resources for connection and prepared statement
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertMessageSQL, Statement.RETURN_GENERATED_KEYS)) {
+
+            pstmt.setInt(1, message.getTicketId());
+            pstmt.setString(2, message.getSenderType());
+            pstmt.setString(3, message.getSenderName());
+            pstmt.setString(4, message.getContent());
+            pstmt.setTimestamp(5, Timestamp.valueOf(message.getTimestamp()));
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Inserting message failed, no rows affected.");
             }
+
+            // Retrieve the generated message ID
+            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    int messageId = generatedKeys.getInt(1);
+                    message.setId(messageId);
+                    System.out.println("Message inserted successfully.");
+                } else {
+                    throw new SQLException("Inserting message failed, no ID obtained.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error executing insertMessage: " + e.getMessage());
+            throw new SQLException("Failed to insert message into the database.", e);
         }
-    } catch (SQLException e) {
-        System.err.println("Error executing insertMessage: " + e.getMessage());
-        throw new SQLException("Failed to insert message into the database.", e);
     }
-}
     
     public static boolean ticketExists(int ticketId) throws SQLException {
         String query = "SELECT COUNT(*) FROM Tickets WHERE id = ?";
@@ -376,8 +376,8 @@ public class DatabaseUtil {
     }
 
 
-// Retrieve all messages for a specific ticket
-public static List<Message> getMessagesForTicket(int ticketId) throws SQLException {
+    // Retrieve all messages for a specific ticket
+    public static List<Message> getMessagesForTicket(int ticketId) throws SQLException {
         List<Message> messages = new ArrayList<>();
         String query = "SELECT * FROM Messages WHERE ticket_id = ? ORDER BY timestamp ASC";
         establishConnection();  // Ensure the connection is open
@@ -399,12 +399,13 @@ public static List<Message> getMessagesForTicket(int ticketId) throws SQLExcepti
         }
         return messages;
     }
-public static void clearTable(String tableName) {
-    try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-        stmt.executeUpdate("DELETE FROM " + tableName);
-        stmt.executeUpdate("ALTER TABLE " + tableName + " ALTER COLUMN ID RESTART WITH 1");
-    } catch (SQLException e) {
-        e.printStackTrace();
+    
+    public static void clearTable(String tableName) {
+        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("DELETE FROM " + tableName);
+            stmt.executeUpdate("ALTER TABLE " + tableName + " ALTER COLUMN ID RESTART WITH 1");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
-}
 }
