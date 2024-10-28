@@ -77,6 +77,13 @@ public class CustomerRegistrationHandler {
                 JOptionPane.showMessageDialog(frame, "Invalid email format. Please enter a valid email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+            
+            // Validate password using PasswordUtil
+            String passwordError = PasswordUtil.validatePassword(password);
+            if (passwordError != null) {
+                JOptionPane.showMessageDialog(frame, passwordError, "Registration Failed", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
             if (personService.findPersonByEmail(email) != null) {
                 JOptionPane.showMessageDialog(frame, "An account with this email already exists. Please use a different email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
