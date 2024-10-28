@@ -75,7 +75,7 @@ public class DatabaseUtil {
             // Check and create Customers table if it doesn't exist
             if (!tableExists("Customers")) {
                 String createCustomersTable = "CREATE TABLE Customers (" +
-                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
+                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
                         "firstName VARCHAR(100)," + // Changed from name to firstName
                         "lastName VARCHAR(100)," +  // Added lastName
                         "email VARCHAR(100) UNIQUE," +
@@ -87,7 +87,7 @@ public class DatabaseUtil {
             // Check and create SupportStaff table if it doesn't exist
             if (!tableExists("SupportStaff")) {
                 String createSupportStaffTable = "CREATE TABLE SupportStaff (" +
-                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
+                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
                         "firstName VARCHAR(100)," + // Added firstName
                         "lastName VARCHAR(100)," +  // Added lastName
                         "username VARCHAR(50)," +
@@ -100,7 +100,7 @@ public class DatabaseUtil {
             // Check and create Tickets table if it doesn't exist
             if (!tableExists("Tickets")) {
                 String createTicketsTable = "CREATE TABLE Tickets (" +
-                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
+                        "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +                        
                         "customerId INT," +
                         "agentId INT," +
                         "topic VARCHAR(100)," +
@@ -116,7 +116,7 @@ public class DatabaseUtil {
             
             if (!tableExists("Messages")) {
             String createMessagesTable = "CREATE TABLE Messages (" +
-                    "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
+                    "id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY," +
                     "ticket_id INT," +
                     "sender_type VARCHAR(50)," +
                     "sender_name VARCHAR(100)," +
