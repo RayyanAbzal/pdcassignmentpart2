@@ -28,11 +28,13 @@ public class CustomerRegistrationHandler {
     private final PersonService<Customer> personService;
     private final SetLastMessageCallback setLastMessageCallback;
 
+    // Initializes the CustomerRegistrationHandler with services and a callback for setting messages
     public CustomerRegistrationHandler(PersonService<Customer> personService, SetLastMessageCallback setLastMessageCallback) {
         this.personService = personService;
         this.setLastMessageCallback = setLastMessageCallback;
     }
 
+    // Shows the registration form for the customer, validates the input, and registers if valid
     public void handleRegistration(JFrame frame) {
         JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10)); // Increase rows
 
@@ -67,13 +69,13 @@ public class CustomerRegistrationHandler {
                 return;
             }
 
-            // Validate email using EmailUtil
+            // Validate email format
             if (!ValidationUtil.isValidEmail(email)) {
                 JOptionPane.showMessageDialog(frame, "Invalid email format. Please enter a valid email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-            // Validate password using PasswordUtil
+            // Validate password requirements
             String passwordError = ValidationUtil.validatePassword(password);
             if (passwordError != null) {
                 JOptionPane.showMessageDialog(frame, passwordError, "Registration Failed", JOptionPane.ERROR_MESSAGE);
@@ -89,6 +91,7 @@ public class CustomerRegistrationHandler {
         }
     }
 
+    // Saves the customer with capitalized names and displays a confirmation message
     private void saveCustomer(Customer customer) {
         customer.setFirstName(capitalizeFirstLetter(customer.getFirstName()));
         customer.setLastName(capitalizeFirstLetter(customer.getLastName()));
@@ -97,6 +100,7 @@ public class CustomerRegistrationHandler {
         setLastMessageCallback.set("Customer registered successfully.");
     }
 
+    // Capitalizes the first letter of a string, used to format names
     private String capitalizeFirstLetter(String input) {
         if (input == null || input.isEmpty()) {
             return input;
@@ -104,6 +108,7 @@ public class CustomerRegistrationHandler {
         return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
     }
 
+    // Functional interface for setting the last message displayed to the user
     @FunctionalInterface
     public interface SetLastMessageCallback {
         void set(String message);
