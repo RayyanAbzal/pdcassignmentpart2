@@ -3,7 +3,6 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package service.desk.system;
-import java.util.regex.Pattern;
 
 
 /**
@@ -15,7 +14,7 @@ import java.util.regex.Pattern;
  * Represents a support staff member in the Service Desk System.
  * Inherits from Person and adds a username and password for authentication.
  */
-public class SupportStaffMember extends Person implements Authenticated {
+public class SupportStaffMember extends Person {
     private String username; // Username for the support staff
     private String password; // Holds the hashed password
 
@@ -26,22 +25,18 @@ public class SupportStaffMember extends Person implements Authenticated {
         this.password = password; // Consider hashing the password before storing
     }
 
-    @Override
     public String getUsername() {
         return username;
     }
 
-    @Override
     public void setUsername(String username) {
         this.username = username;
     }
 
-    @Override
     public String getPassword() {
         return password;
     }
 
-    @Override
     public void setPassword(String password) {
         this.password = password; // Consider hashing the password before storing
     }
