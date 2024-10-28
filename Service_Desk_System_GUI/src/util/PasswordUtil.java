@@ -19,22 +19,22 @@
 public class PasswordUtil {
 
     // Method to validate password based on criteria (e.g., length, special characters)
-    public static boolean validatePassword(String password) {
+    public static String validatePassword(String password) {
         if (password.length() < 8) {
-            return false; // Password must be at least 8 characters long
+            return "Password must be at least 8 characters long.";
         }
         if (!password.matches(".*[A-Z].*")) {
-            return false; // Password must contain at least one uppercase letter
+            return "Password must contain at least one uppercase letter.";
         }
         if (!password.matches(".*[a-z].*")) {
-            return false; // Password must contain at least one lowercase letter
+            return "Password must contain at least one lowercase letter.";
         }
         if (!password.matches(".*\\d.*")) {
-            return false; // Password must contain at least one number
+            return "Password must contain at least one number.";
         }
         if (!password.matches(".*[!@#$%^&*].*")) {
-            return false; // Password must contain at least one special character (!@#$%^&*)
+            return "Password must contain at least one special character (!@#$%^&*).";
         }
-        return true; // Valid password
+        return null; // Valid password
     }
 }
