@@ -25,12 +25,15 @@ public class AgentLoginHandler {
     private final SetLastMessageCallback setLastMessageCallback;
     private final ServiceDeskSystem serviceDeskSystem;
 
+    // Sets up the AgentLoginHandler with agent verification, message updates, and system navigation.
     public AgentLoginHandler(PersonService<SupportStaffMember> agentService, SetLastMessageCallback setLastMessageCallback, ServiceDeskSystem serviceDeskSystem) {
         this.agentService = agentService;
         this.setLastMessageCallback = setLastMessageCallback;
         this.serviceDeskSystem = serviceDeskSystem;
     }
 
+    // Handles the login process by showing a dialog to enter username and password.
+    // If login is successful, it navigates to the agent's main menu.
     public void handleLogin(JFrame frame) {
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -62,10 +65,10 @@ public class AgentLoginHandler {
 
             SupportStaffMember agent = agentService.findPersonByUsername(username);
             if (agent != null && password.equals(agent.getPassword())) {
-                // Set user info in UserSession
+                // Stores agent info in UserSession for later use
                 UserSession.getInstance().setUserInfo("Agent", agent.getEmail(), agent.getFirstName() + " " + agent.getLastName(), agent.getUsername(), agent.getId());
                 setLastMessageCallback.set("Login successful! Welcome, " + agent.getUsername());
-                // Switch to agent menu
+                // Switches to agent menu
                 serviceDeskSystem.showAgentMenu(agent);
             } else {
                 JOptionPane.showMessageDialog(frame, "Invalid username or password. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
@@ -73,6 +76,7 @@ public class AgentLoginHandler {
         }
     }
 
+    // Functional interface used to set the last message displayed to the user.
     @FunctionalInterface
     public interface SetLastMessageCallback {
         void set(String message);
