@@ -8,8 +8,6 @@ import service.desk.system.SupportStaffMember;
 import services.PersonService;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 /**
  *
  * @author rayyanabzal
@@ -34,36 +32,46 @@ public class AgentLoginHandler {
     }
 
     public void handleLogin(JFrame frame) {
-    JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(10, 10, 10, 10);
 
-    JLabel usernameLabel = new JLabel("Enter your username:");
-    JTextField usernameField = new JTextField();
-    JLabel passwordLabel = new JLabel("Enter your password:");
-    JPasswordField passwordField = new JPasswordField();
+        // Labels and fields with proper alignment
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        panel.add(new JLabel("Enter your username:"), gbc);
 
-    panel.add(usernameLabel);
-    panel.add(usernameField);
-    panel.add(passwordLabel);
-    panel.add(passwordField);
+        gbc.gridx = 1;
+        JTextField usernameField = new JTextField(20); // Increased size
+        panel.add(usernameField, gbc);
 
-    int option = JOptionPane.showConfirmDialog(frame, panel, "Agent Login", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-    if (option == JOptionPane.OK_OPTION) {
-        String username = usernameField.getText();
-        char[] passwordChars = passwordField.getPassword();
-        String password = new String(passwordChars);
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        panel.add(new JLabel("Enter your password:"), gbc);
 
-        SupportStaffMember agent = agentService.findPersonByUsername(username);
-        if (agent != null && password.equals(agent.getPassword())) {
-            // Set user info in UserSession
-            UserSession.getInstance().setUserInfo("Agent", agent.getEmail(), agent.getFirstName() + " " + agent.getLastName(), agent.getUsername(), agent.getId());
-            setLastMessageCallback.set("Login successful! Welcome, " + agent.getUsername());
-            // Switch to agent menu
-            serviceDeskSystem.showAgentMenu(agent);
-        } else {
-            JOptionPane.showMessageDialog(frame, "Invalid username or password. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+        gbc.gridx = 1;
+        JPasswordField passwordField = new JPasswordField(20);
+        panel.add(passwordField, gbc);
+
+        int option = JOptionPane.showConfirmDialog(frame, panel, "Agent Login", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option == JOptionPane.OK_OPTION) {
+            String username = usernameField.getText();
+            char[] passwordChars = passwordField.getPassword();
+            String password = new String(passwordChars);
+
+            SupportStaffMember agent = agentService.findPersonByUsername(username);
+            if (agent != null && password.equals(agent.getPassword())) {
+                // Set user info in UserSession
+                UserSession.getInstance().setUserInfo("Agent", agent.getEmail(), agent.getFirstName() + " " + agent.getLastName(), agent.getUsername(), agent.getId());
+                setLastMessageCallback.set("Login successful! Welcome, " + agent.getUsername());
+                // Switch to agent menu
+                serviceDeskSystem.showAgentMenu(agent);
+            } else {
+                JOptionPane.showMessageDialog(frame, "Invalid username or password. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
-}
 
     @FunctionalInterface
     public interface SetLastMessageCallback {
