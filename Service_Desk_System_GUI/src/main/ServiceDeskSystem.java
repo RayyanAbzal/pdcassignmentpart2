@@ -53,7 +53,7 @@ public class ServiceDeskSystem {
         agentRegistrationHandler = new AgentRegistrationHandler(supportStaffService, this::setLastMessage);
         agentLoginHandler = new AgentLoginHandler(supportStaffService, this::setLastMessage, this);
 
-        // Set up main menu panel
+        // Set up main menu panel/gui
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(54, 57, 63));
         GridBagConstraints gbc = new GridBagConstraints();

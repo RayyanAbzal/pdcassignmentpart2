@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * @author rayyanabzal
  */
 public class ValidationUtil {
-    // basic email format
+    // Basic email format/pattern 
     private static final String EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
     private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX);
     

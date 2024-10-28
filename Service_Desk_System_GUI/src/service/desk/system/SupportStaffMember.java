@@ -38,7 +38,7 @@ public class SupportStaffMember extends Person {
     }
 
     public void setPassword(String password) {
-        this.password = password; // Consider hashing the password before storing
+        this.password = password; // Was going to hash password but ran into too many problems and wasn't required
     }
 
     @Override
