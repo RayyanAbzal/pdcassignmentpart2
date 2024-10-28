@@ -29,14 +29,16 @@ public class TicketManagementHandler {
     private TicketService ticketService;
     private PersonService<SupportStaffMember> agentService;
     private PersonService<Customer> customerService;
-
+    
+    // Sets up the handler with necessary services for tickets and person data
     public TicketManagementHandler(TicketService ticketService, PersonService<SupportStaffMember> agentService,
                                    PersonService<Customer> customerService) {
         this.ticketService = ticketService;
         this.agentService = agentService;
         this.customerService = customerService;
     }
-
+    
+    // Shows the tickets created by the current customer
     public void handleViewMyTickets(JFrame frame) {
         UserSession session = UserSession.getInstance();
 
@@ -62,7 +64,8 @@ public class TicketManagementHandler {
 
         displayTickets(frame, tickets, "Your Tickets", true);
     }
-
+    
+    // Shows the tickets assigned to the current agent
     public void handleViewAssignedTickets(JFrame frame) {
         UserSession session = UserSession.getInstance();
 
@@ -88,34 +91,36 @@ public class TicketManagementHandler {
 
         displayTickets(frame, tickets, "Assigned Tickets", false);
     }
-
-    private void displayTickets(JFrame frame, List<Ticket> tickets, String title, boolean isCustomer) {
-    DefaultListModel<Ticket> listModel = new DefaultListModel<>();
-    tickets.forEach(listModel::addElement);
-
-    JList<Ticket> ticketList = new JList<>(listModel);
-    ticketList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     
-    // Set custom renderer to highlight tickets based on priority
-    ticketList.setCellRenderer(new TicketListCellRenderer());
+    // Displays a list of tickets and allows selection for detailed view
+    private void displayTickets(JFrame frame, List<Ticket> tickets, String title, boolean isCustomer) {
+        DefaultListModel<Ticket> listModel = new DefaultListModel<>();
+        tickets.forEach(listModel::addElement);
 
-    ticketList.addListSelectionListener(e -> {
-        if (!e.getValueIsAdjusting()) {
-            Ticket selectedTicket = ticketList.getSelectedValue();
-            if (selectedTicket != null) {
-                if (isCustomer) {
-                    showTicketDetails(frame, selectedTicket, listModel);
-                } else {
-                    showAgentTicketDetails(frame, selectedTicket, listModel);
+        JList<Ticket> ticketList = new JList<>(listModel);
+        ticketList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // Set custom renderer to highlight tickets based on priority
+        ticketList.setCellRenderer(new TicketListCellRenderer());
+
+        ticketList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                Ticket selectedTicket = ticketList.getSelectedValue();
+                if (selectedTicket != null) {
+                    if (isCustomer) {
+                        showTicketDetails(frame, selectedTicket, listModel);
+                    } else {
+                        showAgentTicketDetails(frame, selectedTicket, listModel);
+                    }
                 }
             }
-        }
-    });
+        });
 
-    JScrollPane scrollPane = new JScrollPane(ticketList);
-    JOptionPane.showMessageDialog(frame, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
-}
-
+        JScrollPane scrollPane = new JScrollPane(ticketList);
+        JOptionPane.showMessageDialog(frame, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    // Shows ticket details for agents, allowing priority setting and resolution
     private void showAgentTicketDetails(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
         JPanel panel = createTicketDetailsPanel(ticket);
         JButton setPriorityButton = createPriorityButton(frame, ticket);
@@ -128,7 +133,8 @@ public class TicketManagementHandler {
 
         JOptionPane.showMessageDialog(frame, panel, "Ticket Details", JOptionPane.INFORMATION_MESSAGE);
     }
-
+    
+    // Shows ticket details for customers, allowing message addition and closing
     private void showTicketDetails(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
         JPanel panel = createTicketDetailsPanel(ticket);
         JButton closeButton = createCloseButton(frame, ticket, listModel);
@@ -139,34 +145,36 @@ public class TicketManagementHandler {
 
         JOptionPane.showMessageDialog(frame, panel, "Ticket Details", JOptionPane.INFORMATION_MESSAGE);
     }
-
+    
+    // Creates a panel with basic ticket details
     private JPanel createTicketDetailsPanel(Ticket ticket) {
-    JPanel panel = new JPanel(new GridBagLayout());
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.insets = new Insets(5, 5, 5, 5); // Adding some padding
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5); // Adding some padding
 
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    panel.add(new JLabel("Ticket ID: " + ticket.getId()), gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        panel.add(new JLabel("Ticket ID: " + ticket.getId()), gbc);
 
-    gbc.gridy++;
-    panel.add(new JLabel("Topic: " + ticket.getTopic()), gbc);
+        gbc.gridy++;
+        panel.add(new JLabel("Topic: " + ticket.getTopic()), gbc);
 
-    gbc.gridy++;
-    panel.add(new JLabel("Content: " + ticket.getContent()), gbc);
+        gbc.gridy++;
+        panel.add(new JLabel("Content: " + ticket.getContent()), gbc);
 
-    gbc.gridy++;
-    panel.add(new JLabel("Status: " + ticket.getStatus()), gbc);
+        gbc.gridy++;
+        panel.add(new JLabel("Status: " + ticket.getStatus()), gbc);
 
-    gbc.gridy++;
-    panel.add(new JLabel("Priority: " + ticket.getPriority()), gbc);
+        gbc.gridy++;
+        panel.add(new JLabel("Priority: " + ticket.getPriority()), gbc);
 
-    gbc.gridy++;
-    panel.add(new JLabel("Created on: " + ticket.getCreatedAt()), gbc);
+        gbc.gridy++;
+        panel.add(new JLabel("Created on: " + ticket.getCreatedAt()), gbc);
 
-    return panel;
-}
-
+        return panel;
+    }
+    
+    // Creates a button to set ticket priority
     private JButton createPriorityButton(JFrame frame, Ticket ticket) {
         JButton button = new JButton("Set Priority (1-3)");
         button.addActionListener(e -> {
@@ -182,6 +190,7 @@ public class TicketManagementHandler {
         return button;
     }
 
+    // Creates a button to resolve a ticket
     private JButton createResolveButton(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
         JButton button = new JButton("Resolve Ticket");
         button.addActionListener(e -> {
@@ -194,7 +203,8 @@ public class TicketManagementHandler {
         });
         return button;
     }
-
+    
+    // Creates a button to close a ticket
     private JButton createCloseButton(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
         JButton button = new JButton("Close Ticket");
         button.addActionListener(e -> {
@@ -207,180 +217,182 @@ public class TicketManagementHandler {
         });
         return button;
     }
-
+    
+    // Creates a button to view or leave messages on a ticket
     private JButton createMessageButton(JFrame frame, Ticket ticket) {
-    JButton button = new JButton("Leave/View Messages");
-    button.addActionListener(e -> {
-        List<Message> messages = null;
-        try {
-            messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
-        } catch (SQLException ex) {
-            showErrorDialog(frame, "Error retrieving messages: " + ex.getMessage(), "Error");
+        JButton button = new JButton("Leave/View Messages");
+        button.addActionListener(e -> {
+            List<Message> messages = null;
+            try {
+                messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
+            } catch (SQLException ex) {
+                showErrorDialog(frame, "Error retrieving messages: " + ex.getMessage(), "Error");
+                return;
+            }
+
+            // Create a modern styled panel for messages
+            JPanel messagePanel = new JPanel(new BorderLayout(10, 10)); // Add padding
+            messagePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // Add margin
+
+            // Text Area for displaying messages, in a more readable format
+            JTextArea messageArea = new JTextArea(12, 40);
+            messageArea.setEditable(false);
+            messageArea.setFont(new Font("Arial", Font.PLAIN, 14)); // Modern font
+            messageArea.setLineWrap(true);
+            messageArea.setWrapStyleWord(true);
+            messageArea.setBackground(new Color(240, 240, 240)); // Subtle background
+            messageArea.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+
+            StringBuilder messageDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
+            if (messages != null && !messages.isEmpty()) {
+                for (Message message : messages) {
+                    messageDisplay.append(message.getTimestamp())
+                        .append(" - [").append(message.getSenderType())
+                        .append("] ").append(message.getSenderName())
+                        .append(": ").append(message.getContent())
+                        .append("\n\n"); // Add spacing between messages
+                }
+            } else {
+                messageDisplay.append("No messages yet.\n");
+            }
+
+            messageArea.setText(messageDisplay.toString());
+            JScrollPane scrollPane = new JScrollPane(messageArea);
+            scrollPane.setBorder(null); // No visible border for cleaner look
+            messagePanel.add(scrollPane, BorderLayout.CENTER);
+
+            // TextField for new message input with better layout
+            JTextField newMessageField = new JTextField();
+            newMessageField.setFont(new Font("Arial", Font.PLAIN, 14));
+            newMessageField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200)),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            ));
+
+            // Panel for input label and field
+            JPanel inputPanel = new JPanel(new BorderLayout(5, 5));
+            inputPanel.add(new JLabel("Enter your message:"), BorderLayout.NORTH);
+            inputPanel.add(newMessageField, BorderLayout.CENTER);
+            messagePanel.add(inputPanel, BorderLayout.SOUTH);
+
+            // Show the panel in a dialog with consistent padding and cleaner buttons
+            UIManager.put("OptionPane.buttonFont", new Font("Arial", Font.PLAIN, 13)); // Modernize buttons
+            int result = JOptionPane.showConfirmDialog(frame, messagePanel, "Messages", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+            if (result == JOptionPane.OK_OPTION) {
+                String newMessageContent = newMessageField.getText().trim();
+                if (!newMessageContent.isEmpty()) {
+                    UserSession session = UserSession.getInstance();
+
+                    if (ticket.getId() <= 0) {
+                        showErrorDialog(frame, "Invalid ticket ID.", "Error");
+                        return;
+                    }
+
+                    String senderType = session.getRole();
+                    String senderName = session.getName();
+
+                    if (senderType == null || senderType.isEmpty()) {
+                        showErrorDialog(frame, "Sender type cannot be null or empty.", "Error");
+                        return;
+                    }
+
+                    if (senderName == null || senderName.isEmpty()) {
+                        showErrorDialog(frame, "Sender name cannot be null or empty.", "Error");
+                        return;
+                    }
+
+                    try {
+                        if (!DatabaseUtil.ticketExists(ticket.getId())) {
+                            showErrorDialog(frame, "Ticket does not exist.", "Error");
+                            return;
+                        }
+                    } catch (SQLException ex) {
+                        showErrorDialog(frame, "Error checking ticket existence: " + ex.getMessage(), "Error");
+                        return;
+                    }
+
+                    Message newMessage = new Message(0, ticket.getId(), senderType, senderName, newMessageContent, LocalDateTime.now());
+
+                    try {
+                        DatabaseUtil.insertMessage(newMessage);
+                        messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
+                        StringBuilder updatedDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
+
+                        for (Message message : messages) {
+                            updatedDisplay.append(message.getTimestamp())
+                                .append(" - [").append(message.getSenderType())
+                                .append("] ").append(message.getSenderName())
+                                .append(": ").append(message.getContent())
+                                .append("\n\n");
+                        }
+
+                        messageArea.setText(updatedDisplay.toString());
+                        JOptionPane.showMessageDialog(frame, "Message sent successfully.");
+                    } catch (SQLException ex) {
+                        showErrorDialog(frame, "Error sending message: " + ex.getMessage(), "Error");
+                    }
+                }
+            }
+        });
+        return button;
+    }
+
+    // Handles ticket creation for customers
+    public void handleTicketCreation(JFrame frame) {
+        UserSession session = UserSession.getInstance();
+
+        if (!session.getRole().equals("Customer")) {
+            showErrorDialog(frame, "Only customers can create tickets.", "Access Denied");
             return;
         }
 
-        // Create a modern styled panel for messages
-        JPanel messagePanel = new JPanel(new BorderLayout(10, 10)); // Add padding
-        messagePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); // Add margin
-
-        // Text Area for displaying messages, in a more readable format
-        JTextArea messageArea = new JTextArea(12, 40);
-        messageArea.setEditable(false);
-        messageArea.setFont(new Font("Arial", Font.PLAIN, 14)); // Modern font
-        messageArea.setLineWrap(true);
-        messageArea.setWrapStyleWord(true);
-        messageArea.setBackground(new Color(240, 240, 240)); // Subtle background
-        messageArea.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-
-        StringBuilder messageDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
-        if (messages != null && !messages.isEmpty()) {
-            for (Message message : messages) {
-                messageDisplay.append(message.getTimestamp())
-                    .append(" - [").append(message.getSenderType())
-                    .append("] ").append(message.getSenderName())
-                    .append(": ").append(message.getContent())
-                    .append("\n\n"); // Add spacing between messages
-            }
-        } else {
-            messageDisplay.append("No messages yet.\n");
+        Customer customer = customerService.findPersonByEmail(session.getEmail());
+        if (customer == null) {
+            showErrorDialog(frame, "Customer not found.", "Ticket Creation Failed");
+            return;
         }
 
-        messageArea.setText(messageDisplay.toString());
-        JScrollPane scrollPane = new JScrollPane(messageArea);
-        scrollPane.setBorder(null); // No visible border for cleaner look
-        messagePanel.add(scrollPane, BorderLayout.CENTER);
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10); // Add padding around components
 
-        // TextField for new message input with better layout
-        JTextField newMessageField = new JTextField();
-        newMessageField.setFont(new Font("Arial", Font.PLAIN, 14));
-        newMessageField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 200)),
-            BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        ));
-        
-        // Panel for input label and field
-        JPanel inputPanel = new JPanel(new BorderLayout(5, 5));
-        inputPanel.add(new JLabel("Enter your message:"), BorderLayout.NORTH);
-        inputPanel.add(newMessageField, BorderLayout.CENTER);
-        messagePanel.add(inputPanel, BorderLayout.SOUTH);
+        // Ticket Topic
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        JLabel topicLabel = new JLabel("Enter ticket topic:");
+        panel.add(topicLabel, gbc);
 
-        // Show the panel in a dialog with consistent padding and cleaner buttons
-        UIManager.put("OptionPane.buttonFont", new Font("Arial", Font.PLAIN, 13)); // Modernize buttons
-        int result = JOptionPane.showConfirmDialog(frame, messagePanel, "Messages", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        JTextField topicField = new JTextField(20); // Fixed width
+        panel.add(topicField, gbc);
 
-        if (result == JOptionPane.OK_OPTION) {
-            String newMessageContent = newMessageField.getText().trim();
-            if (!newMessageContent.isEmpty()) {
-                UserSession session = UserSession.getInstance();
+        // Ticket Content
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        JLabel contentLabel = new JLabel("Enter ticket content:");
+        panel.add(contentLabel, gbc);
 
-                if (ticket.getId() <= 0) {
-                    showErrorDialog(frame, "Invalid ticket ID.", "Error");
-                    return;
-                }
+        gbc.gridx = 1;
+        JTextArea contentArea = new JTextArea(5, 20);
+        contentArea.setLineWrap(true);
+        contentArea.setWrapStyleWord(true);
+        JScrollPane scrollPane = new JScrollPane(contentArea);
+        panel.add(scrollPane, gbc);
 
-                String senderType = session.getRole();
-                String senderName = session.getName();
+        // Set panel border for better visual separation
+        panel.setBorder(BorderFactory.createTitledBorder("Create Ticket"));
 
-                if (senderType == null || senderType.isEmpty()) {
-                    showErrorDialog(frame, "Sender type cannot be null or empty.", "Error");
-                    return;
-                }
-
-                if (senderName == null || senderName.isEmpty()) {
-                    showErrorDialog(frame, "Sender name cannot be null or empty.", "Error");
-                    return;
-                }
-
-                try {
-                    if (!DatabaseUtil.ticketExists(ticket.getId())) {
-                        showErrorDialog(frame, "Ticket does not exist.", "Error");
-                        return;
-                    }
-                } catch (SQLException ex) {
-                    showErrorDialog(frame, "Error checking ticket existence: " + ex.getMessage(), "Error");
-                    return;
-                }
-
-                Message newMessage = new Message(0, ticket.getId(), senderType, senderName, newMessageContent, LocalDateTime.now());
-
-                try {
-                    DatabaseUtil.insertMessage(newMessage);
-                    messages = DatabaseUtil.getMessagesForTicket(ticket.getId());
-                    StringBuilder updatedDisplay = new StringBuilder("Messages for Ticket " + ticket.getId() + ":\n\n");
-
-                    for (Message message : messages) {
-                        updatedDisplay.append(message.getTimestamp())
-                            .append(" - [").append(message.getSenderType())
-                            .append("] ").append(message.getSenderName())
-                            .append(": ").append(message.getContent())
-                            .append("\n\n");
-                    }
-
-                    messageArea.setText(updatedDisplay.toString());
-                    JOptionPane.showMessageDialog(frame, "Message sent successfully.");
-                } catch (SQLException ex) {
-                    showErrorDialog(frame, "Error sending message: " + ex.getMessage(), "Error");
-                }
-            }
+        // Show dialog
+        int option = JOptionPane.showConfirmDialog(frame, panel, "Create Ticket", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option == JOptionPane.OK_OPTION) {
+            createTicket(frame, customer, topicField.getText().trim(), contentArea.getText().trim());
         }
-    });
-    return button;
-}
-
-
-    public void handleTicketCreation(JFrame frame) {
-    UserSession session = UserSession.getInstance();
-
-    if (!session.getRole().equals("Customer")) {
-        showErrorDialog(frame, "Only customers can create tickets.", "Access Denied");
-        return;
     }
-
-    Customer customer = customerService.findPersonByEmail(session.getEmail());
-    if (customer == null) {
-        showErrorDialog(frame, "Customer not found.", "Ticket Creation Failed");
-        return;
-    }
-
-    JPanel panel = new JPanel(new GridBagLayout());
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.insets = new Insets(10, 10, 10, 10); // Add padding around components
-
-    // Ticket Topic
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.anchor = GridBagConstraints.WEST;
-    JLabel topicLabel = new JLabel("Enter ticket topic:");
-    panel.add(topicLabel, gbc);
-
-    gbc.gridx = 1;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    JTextField topicField = new JTextField(20); // Fixed width
-    panel.add(topicField, gbc);
-
-    // Ticket Content
-    gbc.gridx = 0;
-    gbc.gridy = 1;
-    JLabel contentLabel = new JLabel("Enter ticket content:");
-    panel.add(contentLabel, gbc);
-
-    gbc.gridx = 1;
-    JTextArea contentArea = new JTextArea(5, 20);
-    contentArea.setLineWrap(true);
-    contentArea.setWrapStyleWord(true);
-    JScrollPane scrollPane = new JScrollPane(contentArea);
-    panel.add(scrollPane, gbc);
-
-    // Set panel border for better visual separation
-    panel.setBorder(BorderFactory.createTitledBorder("Create Ticket"));
-
-    // Show dialog
-    int option = JOptionPane.showConfirmDialog(frame, panel, "Create Ticket", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-    if (option == JOptionPane.OK_OPTION) {
-        createTicket(frame, customer, topicField.getText().trim(), contentArea.getText().trim());
-    }
-}
-
+    
+    // Creates and assigns a new ticket to an available agent
     private void createTicket(JFrame frame, Customer customer, String topic, String content) {
         SupportStaffMember agent = getAvailableAgent();
         if (agent == null) {
@@ -396,6 +408,7 @@ public class TicketManagementHandler {
         showInfoDialog(frame, "Ticket created successfully. Ticket ID: " + ticketId, "Success");
     }
 
+    // Fetches the next available ticket ID from the database
     private int fetchNextTicketId(JFrame frame) {
         try {
             return DatabaseUtil.getMaxTicketId() + 1;
@@ -404,7 +417,8 @@ public class TicketManagementHandler {
             return -1;
         }
     }
-
+    
+    // Selects an available agent with the fewest assigned tickets
     private SupportStaffMember getAvailableAgent() {
         List<SupportStaffMember> agents = agentService.getAllSupportStaff();
         return agents.stream()
@@ -414,7 +428,8 @@ public class TicketManagementHandler {
                     return (countA < countB) ? a : (countA == countB ? Math.random() < 0.5 ? a : b : b);
                 }).orElse(null);
     }
-
+    
+    // Updates ticket details in the database
     private void updateTicket(JFrame frame, Ticket ticket, String successMessage) {
         try {
             DatabaseUtil.updateTicket(ticket);
@@ -423,33 +438,37 @@ public class TicketManagementHandler {
             showErrorDialog(frame, "Failed to update ticket: " + ex.getMessage(), "Error");
         }
     }
-    //help from chatgpt for the below method
+    
+    // Got assistance from chatgpt for the below method
+    // Custom list renderer to highlight tickets based on priority
     private class TicketListCellRenderer extends DefaultListCellRenderer {
-    @Override
-    public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-        Component renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-        if (value instanceof Ticket) {
-            Ticket ticket = (Ticket) value;
-            // Change background based on priority
-            if (ticket.getPriority() == 2) {
-                renderer.setBackground(new Color(255, 223, 186)); // Light orange
-            } else if (ticket.getPriority() == 3) {
-                renderer.setBackground(new Color(255, 182, 182)); // Light red
-            } else {
-                renderer.setBackground(list.getBackground()); // Default background
+        @Override
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            Component renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value instanceof Ticket) {
+                Ticket ticket = (Ticket) value;
+                // Change background based on priority
+                if (ticket.getPriority() == 2) {
+                    renderer.setBackground(new Color(255, 223, 186)); // Light orange
+                } else if (ticket.getPriority() == 3) {
+                    renderer.setBackground(new Color(255, 182, 182)); // Light red
+                } else {
+                    renderer.setBackground(list.getBackground()); // Default background
+                }
+                if (isSelected) {
+                    renderer.setBackground(list.getSelectionBackground()); // Override to selected background if selected
+                }
             }
-            if (isSelected) {
-                renderer.setBackground(list.getSelectionBackground()); // Override to selected background if selected
-            }
+            return renderer;
         }
-        return renderer;
     }
-}
-
+    
+    // Shows an error dialog
     private void showErrorDialog(JFrame frame, String message, String title) {
         JOptionPane.showMessageDialog(frame, message, title, JOptionPane.ERROR_MESSAGE);
     }
-
+    
+    // Shows an information dialog
     private void showInfoDialog(JFrame frame, String message, String title) {
         JOptionPane.showMessageDialog(frame, message, title, JOptionPane.INFORMATION_MESSAGE);
     }
