@@ -6,14 +6,9 @@ package main;
 
 import service.desk.system.Customer;
 import services.PersonService;
-import util.EmailUtil;
-import util.PasswordUtil;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.sql.SQLException;
-import util.DatabaseUtil;
+import util.ValidationUtil;
 
 
 /**
@@ -73,13 +68,13 @@ public class CustomerRegistrationHandler {
             }
 
             // Validate email using EmailUtil
-            if (!EmailUtil.isValidEmail(email)) {
+            if (!ValidationUtil.isValidEmail(email)) {
                 JOptionPane.showMessageDialog(frame, "Invalid email format. Please enter a valid email.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
             // Validate password using PasswordUtil
-            String passwordError = PasswordUtil.validatePassword(password);
+            String passwordError = ValidationUtil.validatePassword(password);
             if (passwordError != null) {
                 JOptionPane.showMessageDialog(frame, passwordError, "Registration Failed", JOptionPane.ERROR_MESSAGE);
                 return;
