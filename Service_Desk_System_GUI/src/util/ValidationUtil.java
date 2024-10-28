@@ -1,24 +1,23 @@
-    /*
-     * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
-     * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
-     */
-    package util;
-    import java.security.MessageDigest;
-    import java.security.NoSuchAlgorithmException;
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package util;
 
-    /**
-     *
-     * @author rayyanabzal
-     */
+import java.util.regex.Pattern;
 
-    /*
-     * Utility class for handling password operations.
-     * Provides methods to hash passwords, verify hashed passwords,
-     * and validate password strength based on specific rules.
-     */
-public class PasswordUtil {
-
-    // Method to validate password based on criteria (e.g., length, special characters)
+/**
+ *
+ * @author rayyanabzal
+ */
+public class ValidationUtil {
+    private static final String EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX);
+    
+    public static boolean isValidEmail(String email) {
+        return email != null && EMAIL_PATTERN.matcher(email).matches();
+    }
+    
     public static String validatePassword(String password) {
         if (password.length() < 8) {
             return "Password must be at least 8 characters long.";
@@ -37,4 +36,5 @@ public class PasswordUtil {
         }
         return null; // Valid password
     }
+    
 }
