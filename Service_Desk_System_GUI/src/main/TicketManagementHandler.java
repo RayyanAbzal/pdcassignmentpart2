@@ -90,27 +90,31 @@ public class TicketManagementHandler {
     }
 
     private void displayTickets(JFrame frame, List<Ticket> tickets, String title, boolean isCustomer) {
-        DefaultListModel<Ticket> listModel = new DefaultListModel<>();
-        tickets.forEach(listModel::addElement);
+    DefaultListModel<Ticket> listModel = new DefaultListModel<>();
+    tickets.forEach(listModel::addElement);
 
-        JList<Ticket> ticketList = new JList<>(listModel);
-        ticketList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        ticketList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                Ticket selectedTicket = ticketList.getSelectedValue();
-                if (selectedTicket != null) {
-                    if (isCustomer) {
-                        showTicketDetails(frame, selectedTicket, listModel);
-                    } else {
-                        showAgentTicketDetails(frame, selectedTicket, listModel);
-                    }
+    JList<Ticket> ticketList = new JList<>(listModel);
+    ticketList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    
+    // Set custom renderer to highlight tickets based on priority
+    ticketList.setCellRenderer(new TicketListCellRenderer());
+
+    ticketList.addListSelectionListener(e -> {
+        if (!e.getValueIsAdjusting()) {
+            Ticket selectedTicket = ticketList.getSelectedValue();
+            if (selectedTicket != null) {
+                if (isCustomer) {
+                    showTicketDetails(frame, selectedTicket, listModel);
+                } else {
+                    showAgentTicketDetails(frame, selectedTicket, listModel);
                 }
             }
-        });
+        }
+    });
 
-        JScrollPane scrollPane = new JScrollPane(ticketList);
-        JOptionPane.showMessageDialog(frame, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
-    }
+    JScrollPane scrollPane = new JScrollPane(ticketList);
+    JOptionPane.showMessageDialog(frame, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
+}
 
     private void showAgentTicketDetails(JFrame frame, Ticket ticket, DefaultListModel<Ticket> listModel) {
         JPanel panel = createTicketDetailsPanel(ticket);
@@ -394,6 +398,28 @@ public class TicketManagementHandler {
             showErrorDialog(frame, "Failed to update ticket: " + ex.getMessage(), "Error");
         }
     }
+    //help from chatgpt for the below method
+    private class TicketListCellRenderer extends DefaultListCellRenderer {
+    @Override
+    public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+        Component renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+        if (value instanceof Ticket) {
+            Ticket ticket = (Ticket) value;
+            // Change background based on priority
+            if (ticket.getPriority() == 2) {
+                renderer.setBackground(new Color(255, 223, 186)); // Light orange
+            } else if (ticket.getPriority() == 3) {
+                renderer.setBackground(new Color(255, 182, 182)); // Light red
+            } else {
+                renderer.setBackground(list.getBackground()); // Default background
+            }
+            if (isSelected) {
+                renderer.setBackground(list.getSelectionBackground()); // Override to selected background if selected
+            }
+        }
+        return renderer;
+    }
+}
 
     private void showErrorDialog(JFrame frame, String message, String title) {
         JOptionPane.showMessageDialog(frame, message, title, JOptionPane.ERROR_MESSAGE);
