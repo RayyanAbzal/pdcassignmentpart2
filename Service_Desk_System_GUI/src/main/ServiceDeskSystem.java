@@ -11,8 +11,6 @@ import services.PersonService;
 import util.DatabaseUtil;
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
-import service.desk.system.Ticket;
 import services.TicketService;
 /**
  *
