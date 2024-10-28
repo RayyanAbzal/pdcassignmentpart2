@@ -329,32 +329,57 @@ public class TicketManagementHandler {
 
 
     public void handleTicketCreation(JFrame frame) {
-        UserSession session = UserSession.getInstance();
+    UserSession session = UserSession.getInstance();
 
-        if (!session.getRole().equals("Customer")) {
-            showErrorDialog(frame, "Only customers can create tickets.", "Access Denied");
-            return;
-        }
-
-        Customer customer = customerService.findPersonByEmail(session.getEmail());
-        if (customer == null) {
-            showErrorDialog(frame, "Customer not found.", "Ticket Creation Failed");
-            return;
-        }
-
-        JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
-        JTextField topicField = new JTextField();
-        JTextArea contentArea = new JTextArea(5, 20);
-        panel.add(new JLabel("Enter ticket topic:"));
-        panel.add(topicField);
-        panel.add(new JLabel("Enter ticket content:"));
-        panel.add(new JScrollPane(contentArea));
-
-        int option = JOptionPane.showConfirmDialog(frame, panel, "Create Ticket", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option == JOptionPane.OK_OPTION) {
-            createTicket(frame, customer, topicField.getText(), contentArea.getText());
-        }
+    if (!session.getRole().equals("Customer")) {
+        showErrorDialog(frame, "Only customers can create tickets.", "Access Denied");
+        return;
     }
+
+    Customer customer = customerService.findPersonByEmail(session.getEmail());
+    if (customer == null) {
+        showErrorDialog(frame, "Customer not found.", "Ticket Creation Failed");
+        return;
+    }
+
+    JPanel panel = new JPanel(new GridBagLayout());
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 10, 10); // Add padding around components
+
+    // Ticket Topic
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.anchor = GridBagConstraints.WEST;
+    JLabel topicLabel = new JLabel("Enter ticket topic:");
+    panel.add(topicLabel, gbc);
+
+    gbc.gridx = 1;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    JTextField topicField = new JTextField(20); // Fixed width
+    panel.add(topicField, gbc);
+
+    // Ticket Content
+    gbc.gridx = 0;
+    gbc.gridy = 1;
+    JLabel contentLabel = new JLabel("Enter ticket content:");
+    panel.add(contentLabel, gbc);
+
+    gbc.gridx = 1;
+    JTextArea contentArea = new JTextArea(5, 20);
+    contentArea.setLineWrap(true);
+    contentArea.setWrapStyleWord(true);
+    JScrollPane scrollPane = new JScrollPane(contentArea);
+    panel.add(scrollPane, gbc);
+
+    // Set panel border for better visual separation
+    panel.setBorder(BorderFactory.createTitledBorder("Create Ticket"));
+
+    // Show dialog
+    int option = JOptionPane.showConfirmDialog(frame, panel, "Create Ticket", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+    if (option == JOptionPane.OK_OPTION) {
+        createTicket(frame, customer, topicField.getText().trim(), contentArea.getText().trim());
+    }
+}
 
     private void createTicket(JFrame frame, Customer customer, String topic, String content) {
         SupportStaffMember agent = getAvailableAgent();
