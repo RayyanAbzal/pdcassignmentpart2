@@ -50,6 +50,10 @@ public class Ticket {
     public int getId() {
         return id;
     }
+    
+    public void setId(int id) {
+        this.id = id;
+    }
 
     /*
      * Retrieves the customer who created the ticket.
@@ -133,11 +137,12 @@ public class Ticket {
      * Priority must be between 1 and 3.
      */
     public void setPriority(int priority) {
-        if (priority < 1 || priority > 3) {
-            throw new IllegalArgumentException("Priority must be between 1 and 3.");
-        }
-        this.priority = priority;
+    if (priority < 1 || priority > 3) {
+        throw new IllegalArgumentException("Priority must be between 1 and 3.");
     }
+    this.priority = priority;
+    System.out.println("Priority set to: " + this.priority); // Debug line
+}
 
     /*
      * Returns a string representation of the ticket, including all relevant details.
