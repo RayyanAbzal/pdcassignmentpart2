@@ -1,7 +1,7 @@
-Mon Oct 21 17:48:58 NZDT 2024 : Apache Derby Network Server - 10.14.2.0 - (1828579) started and ready to accept connections on port 1527
+Sun Oct 27 11:26:47 NZDT 2024 : Apache Derby Network Server - 10.14.2.0 - (1828579) started and ready to accept connections on port 1527
 ----------------------------------------------------------------
-Mon Oct 21 17:49:01 NZDT 2024:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0192-ad68-1950-00002aba80f7 
+Sun Oct 27 11:26:51 NZDT 2024:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0192-caf0-58c9-00002aba80f7 
 on database directory /Users/rayyanabzal/Documents/pdcassignmentpart2/servicedesksystem with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@277050dc 
 Loaded from file:/Users/rayyanabzal/Downloads/db-derby-10.14.2.0-bin/lib/derby.jar
 java.vendor=Oracle Corporation
@@ -12,3 +12,9 @@ os.arch=aarch64
 os.version=14.6.1
 derby.system.home=/Users/rayyanabzal/Documents/pdcassignmentpart2
 Database Class Loader started - derby.database.classpath=''
+----------------------------------------------------------------
+Sun Oct 27 11:29:33 NZDT 2024: Shutting down Derby engine
+----------------------------------------------------------------
+Sun Oct 27 11:29:33 NZDT 2024:
+Shutting down instance a816c00e-0192-caf0-58c9-00002aba80f7 on database directory /Users/rayyanabzal/Documents/pdcassignmentpart2/servicedesksystem with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@277050dc 
+----------------------------------------------------------------
